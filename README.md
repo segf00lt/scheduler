@@ -4,18 +4,18 @@ This is a project for my OS class. The idea is to learn about process scheduling
 
 ## Build and run
 
-To build first compile `nob.c`:
+To build first run:
 
 ```
-# windows
+# windows (developer command prompt)
 
-cl nob.c
+setup.bat
 
-# linux (not implemented yet)
+# linux
 
-gcc nob.c -o nob
+./setup.sh
 ```
 
 Then once the `nob` build program is build run `./nob.exe` (or `./nob` on unix machines) and the project will build.
 
-Once built, run `./scheduler.exe` (or `./scheduler` on unix machines).
+Once built, run `./scheduler.exe` or `./scheduler`.

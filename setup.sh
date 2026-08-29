@@ -1,3 +1,3 @@
 #!/bin/sh
 
-cc nob.c -o nob
+cc nob.c -o nob && ./nob
