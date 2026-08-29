@@ -78,43 +78,62 @@ int win32_build(void) {
 }
 
 int linux_build(void) {
-  Nob_Cmd cmd = {0};
-  nob_cmd_append(&cmd,
-    "gcc",
-    "-std=c11",
-    "-Wall",
-    "-Wextra",
-    "-Wno-unused-parameter",
-    "-Wno-unused-function",
-    "-Wno-switch",
-    "-Wno-sign-compare",
-    // "-Wno-format",
-    "-g",
-    "-fno-omit-frame-pointer",
-    // "-no-pie",
-    "-O0",
-    // "-pthread",
-    // "-fsanitize=address",
-    "-o",
-    "jcc",
-    "jcc_build.c",
-    "third_party/dyncall-1.4/dyncall/libdyncall_s.a",
-    "third_party/dyncall-1.4/dynload/libdynload_s.a",
-    ""
-  );
-  if(!nob_cmd_run_sync_and_reset(&cmd)) return 0;
-  return 1;
+    Nob_Cmd cmd = {0};
+
+    nob_cmd_append(&cmd,
+        "g++",
+        "-std=c++11",
+        "-Wall",
+        "-Wextra",
+        "-Wno-type-limits",
+        "-Wno-unused-variable",
+        "-Wno-write-strings",
+        "-fpermissive",
+        "-g",
+        "-O0",
+        "-c",
+        "scheduler_build.cpp",
+        "-o",
+        "scheduler.o"
+    );
+    if(!nob_cmd_run_sync_and_reset(&cmd)) return 0;
+
+    nob_cmd_append(&cmd,
+        "gcc",
+        "-std=c11",
+        "-Wall",
+        "-Wextra",
+        "-Wno-unused-variable",
+        "-g",
+        "-O0",
+        "-c",
+        "base_build.c",
+        "-o",
+        "base.o"
+    );
+    if(!nob_cmd_run_sync_and_reset(&cmd)) return 0;
+
+    nob_cmd_append(&cmd,
+        "g++",
+        "-g",
+        "-O0",
+        "scheduler.o",
+        "base.o",
+        "-o",
+        "scheduler"
+    );
+    if(!nob_cmd_run_sync_and_reset(&cmd)) return 0;
+
+    return 1;
 }
-
-
 
 int main(int argc, char **argv) {
   NOB_GO_REBUILD_URSELF(argc, argv);
 
-  if(!win32_build()) return 1;
+  if(!linux_build()) return 1;
 
   return 0;
-  if(!linux_build()) return 1;
+  if(!win32_build()) return 1;
   if(!build_raylib_win32()) return 1;
 
 

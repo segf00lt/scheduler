@@ -1,5 +1,6 @@
 
 #define BASE_SHARED
+#define PLATFORM_CORE_EXPORT
 
 #include "base/base_include.h"
 #include "platform/platform.h"

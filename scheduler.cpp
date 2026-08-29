@@ -162,7 +162,7 @@ int main(void) {
   u32 program_len;
   Inst *program = assemble(a, (char*)asm_code.s, &program_len);
 
-  Process_state process_1 = {0};
+  Process_state process_1 = {};
   process_1.instructions = program;
   process_1.max_pc_value = program_len - 1;
   process_runner(process_1);

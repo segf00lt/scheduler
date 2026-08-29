@@ -176,7 +176,7 @@
 #define PANIC(msg)    PANICF(msg"%s", "")
 #define PASS          ASSERT(1)
 #define NOOP ((void)0)
-#define STATIC_ASSERT(expr, id) u8 GLUE(id, __LINE__)[(expr)?1:-1]
+#define STATIC_ASSERT(expr, id) global u8 GLUE(id, __LINE__)[(expr)?1:-1]
 #define COWABUNGA fprintf(stderr, "COWABUNGA\n")
 
 
