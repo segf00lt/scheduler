@@ -1,0 +1,123 @@
+#define NOB_IMPLEMENTATION
+#include "nob.h"
+
+#include "third_party/raylib/nob_raylib.c"
+
+int win32_build(void) {
+  Nob_Cmd cmd = {0};
+  nob_cmd_append(&cmd,
+    "cl",
+    "/TP",
+    "/nologo",
+    "/W4",
+    "/wd4100",
+    "/wd4201",
+    "/wd4459",
+    "/wd4477",
+    "/wd4063",
+    "/wd4456",
+    "/wd4244",
+    "/wd4146",
+    "/wd4267",
+    "/Zi",
+    "/Od",
+    "/MDd",
+    "/c",
+    "/Fo:scheduler.obj",
+    "/FS",
+    "scheduler_build.cpp",
+    ""
+  );
+  Nob_Proc nob_proc = nob_cmd_run_async_and_reset(&cmd);
+
+  nob_cmd_append(&cmd,
+    "cl",
+    "/nologo",
+    "/W4",
+    "/wd4100",
+    "/wd4201",
+    "/wd4459",
+    "/wd4477",
+    "/wd4063",
+    "/wd4456",
+    "/wd4244",
+    "/wd4146",
+    "/wd4267",
+    "/Zi",
+    "/Od",
+    "/MDd",
+    "/c",
+    "base_build.c",
+    "/Fo:base.obj",
+    "/FS",
+    ""
+  );
+
+  if(!nob_cmd_run_sync_and_reset(&cmd)) return 0;
+
+  if(!nob_proc_wait(nob_proc)) return 0;
+
+  nob_cmd_append(&cmd,
+    "cl",
+    "/nologo",
+    "/Fe:scheduler.exe",
+    "scheduler.obj",
+    "base_build.obj",
+    "user32.lib",
+    "dxguid.lib",
+    "winmm.lib",
+    "ole32.lib",
+    "/link",
+    "/DEBUG",
+    "/INCREMENTAL:NO",
+    ""
+  );
+  if(!nob_cmd_run_sync_and_reset(&cmd)) return 0;
+
+  return 1;
+}
+
+int linux_build(void) {
+  Nob_Cmd cmd = {0};
+  nob_cmd_append(&cmd,
+    "gcc",
+    "-std=c11",
+    "-Wall",
+    "-Wextra",
+    "-Wno-unused-parameter",
+    "-Wno-unused-function",
+    "-Wno-switch",
+    "-Wno-sign-compare",
+    // "-Wno-format",
+    "-g",
+    "-fno-omit-frame-pointer",
+    // "-no-pie",
+    "-O0",
+    // "-pthread",
+    // "-fsanitize=address",
+    "-o",
+    "jcc",
+    "jcc_build.c",
+    "third_party/dyncall-1.4/dyncall/libdyncall_s.a",
+    "third_party/dyncall-1.4/dynload/libdynload_s.a",
+    ""
+  );
+  if(!nob_cmd_run_sync_and_reset(&cmd)) return 0;
+  return 1;
+}
+
+
+
+int main(int argc, char **argv) {
+  NOB_GO_REBUILD_URSELF(argc, argv);
+
+  if(!win32_build()) return 1;
+
+  return 0;
+  if(!linux_build()) return 1;
+  if(!build_raylib_win32()) return 1;
+
+
+  return 0;
+}
+

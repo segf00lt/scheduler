@@ -1,0 +1,26 @@
+// raddbg 0.9.24 project file
+
+recent_file: path: "scheduler.cpp"
+recent_file: path: "D:/a/_work/1/s/src/vctools/crt/vcstartup/src/utility/utility.cpp"
+target:
+{
+  executable: "scheduler.exe"
+  working_directory: ""
+  enabled: 1
+  entry_point: main
+}
+debug_info:
+{
+  path: "C:/Users/joaod/fun/scheduler/scheduler.pdb"
+  timestamp: 66224144730633
+}
+breakpoint:
+{
+  address_location: main
+  hit_count: 1
+}
+type_view:
+{
+  type: Str8
+  expr: "array(s, len)"
+}
