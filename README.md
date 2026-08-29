@@ -16,6 +16,6 @@ cl nob.c
 gcc nob.c -o nob
 ```
 
-Then once the `nob` build program is build run `./nob` and the project will build.
+Then once the `nob` build program is build run `./nob.exe` (or `./nob` on unix machines) and the project will build.
 
 Once built, run `./scheduler.exe` (or `./scheduler` on unix machines).
