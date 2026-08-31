@@ -13,14 +13,14 @@
 //#endif
 
 
-internal force_inline void
+base_api force_inline void
 func str8_list_append_node_(Str8_list *list, Str8_node *node) {
   sll_queue_push(list->first, list->last, node);
   list->count++;
   list->total_len += node->str.len;
 }
 
-internal Str8
+base_api Str8
 func str8_cat(Arena *a, Str8 str1, Str8 str2) {
   Str8 result = {0};
   s64 len = str1.len + str2.len;
@@ -39,7 +39,7 @@ func str8_cat(Arena *a, Str8 str1, Str8 str2) {
   return result;
 }
 
-internal void
+base_api void
 func str8_list_insert_first_str(Arena *a, Str8_list *list, Str8 str) {
   Str8_node *node = push_struct(a, Str8_node);
   node->str = str;
@@ -48,7 +48,7 @@ func str8_list_insert_first_str(Arena *a, Str8_list *list, Str8 str) {
   list->total_len += str.len;
 }
 
-internal void
+base_api void
 func str8_list_append_str(Arena *a, Str8_list *list, Str8 str) {
   Str8_node *node = push_struct(a, Str8_node);
   node->str = str;
@@ -61,7 +61,7 @@ func str8_list_append_str(Arena *a, Str8_list *list, Str8 str) {
   list->total_len += str.len;
 }
 
-internal Str8_list
+base_api Str8_list
 func str8_list_copy(Arena *a, Str8_list list) {
   Str8_list result = {0};
 
@@ -75,7 +75,7 @@ func str8_list_copy(Arena *a, Str8_list list) {
   return result;
 }
 
-internal Str8
+base_api Str8
 func str8_list_join(Arena *a, Str8_list list, Str8 sep) {
   Str8 result = {0};
 
@@ -125,7 +125,7 @@ func str8_list_join(Arena *a, Str8_list list, Str8 sep) {
   return result;
 }
 
-internal Str8
+base_api Str8
 func str8_escaped(Arena *a, Str8 str) {
   Str8 result;
   u8 *data = push_array_no_zero(a, u8, (str.len + 1) << 1);
@@ -174,13 +174,13 @@ func str8_escaped(Arena *a, Str8 str) {
 
 }
 
-internal Str8
+base_api Str8
 func str8_get_line(Str8 str, s64 start_pos) {
   Str8 line = str8_strip_whitespace(str8_get_line_no_strip(str, start_pos));
   return line;
 }
 
-internal Str8
+base_api Str8
 func str8_get_line_no_strip(Str8 str, s64 start_pos) {
   Str8 line;
   line = str8_slice(str, start_pos, -1);
@@ -188,7 +188,7 @@ func str8_get_line_no_strip(Str8 str, s64 start_pos) {
   return line;
 }
 
-internal Str8
+base_api Str8
 func str8_slice(Str8 str, s64 begin, s64 end) {
   /* NOTE slice end is exclusive */
 
@@ -205,7 +205,7 @@ func str8_slice(Str8 str, s64 begin, s64 end) {
   return result;
 }
 
-internal Str8
+base_api Str8
 func str8_strip_whitespace(Str8 str) {
   Str8 result;
   s64 begin = 0;
@@ -233,7 +233,7 @@ func str8_strip_whitespace(Str8 str) {
   return result;
 }
 
-internal b32
+base_api b32
 func str8_match(Str8 a, Str8 b) {
   if(a.len != b.len) {
     return 0;
@@ -242,14 +242,14 @@ func str8_match(Str8 a, Str8 b) {
   }
 }
 
-internal b32
+base_api b32
 func str8_contains(Str8 str, Str8 substr) {
   s64 found = str8_find(str, substr);
   b32 result = (found >= 0);
   return result;
 }
 
-internal s64
+base_api s64
 func str8_find(Str8 haystack, Str8 needle) {
   s64 found = -1;
 
@@ -272,7 +272,7 @@ func str8_find(Str8 haystack, Str8 needle) {
   return found;
 }
 
-internal s64
+base_api s64
 func str8_find_char(Str8 haystack, u8 needle) {
   s64 found = -1;
 
@@ -288,7 +288,7 @@ func str8_find_char(Str8 haystack, u8 needle) {
   return found;
 }
 
-internal s64
+base_api s64
 func str8_find_first_whitespace(Str8 haystack) {
   s64 found = -1;
 
@@ -304,7 +304,7 @@ func str8_find_first_whitespace(Str8 haystack) {
   return found;
 }
 
-internal Str8_find_results
+base_api Str8_find_results
 func str8_find_all_chars(Arena *a, Str8 haystack, u8 needle, Arena *output_arena) {
   Str8_find_results results = {0};
 
@@ -345,7 +345,7 @@ func str8_find_all_chars(Arena *a, Str8 haystack, u8 needle, Arena *output_arena
   return results;
 }
 
-internal Str8_find_results
+base_api Str8_find_results
 func str8_find_all(Arena *a, Str8 haystack, Str8 needle, Arena *output_arena) {
   Str8_find_results results = {0};
 
@@ -391,7 +391,7 @@ func str8_find_all(Arena *a, Str8 haystack, Str8 needle, Arena *output_arena) {
   return results;
 }
 
-internal b32
+base_api b32
 func str8_starts_with(Str8 str, Str8 start) {
   b32 result = 0;
 
@@ -404,7 +404,7 @@ func str8_starts_with(Str8 str, Str8 start) {
   return result;
 }
 
-internal b32
+base_api b32
 func str8_ends_with(Str8 str, Str8 end) {
   b32 result = 0;
 
@@ -420,7 +420,7 @@ func str8_ends_with(Str8 str, Str8 end) {
   return result;
 }
 
-internal b32
+base_api b32
 func str8_is_cident(Str8 str) {
   b32 result = 1;
 
@@ -440,7 +440,7 @@ func str8_is_cident(Str8 str) {
   return result;
 }
 
-internal b32
+base_api b32
 func str8_is_decimal(Str8 str) {
   b32 result = 1;
 
@@ -454,7 +454,7 @@ func str8_is_decimal(Str8 str) {
   return result;
 }
 
-internal Str8
+base_api Str8
 func str8_match_begin_int(Str8 str, int base) {
   Str8 result = {0};
   s64 i = 0;
@@ -484,7 +484,7 @@ func str8_match_begin_int(Str8 str, int base) {
   return result;
 }
 
-internal u64
+base_api u64
 func str8_parse_int(Str8 str, int base) {
   u64 result;
   switch(base) {
@@ -504,7 +504,7 @@ func str8_parse_int(Str8 str, int base) {
   return result;
 }
 
-internal u64
+base_api u64
 func str8_parse_int_decimal(Str8 str) {
   u64 result = 0;
 
@@ -516,27 +516,27 @@ func str8_parse_int_decimal(Str8 str) {
   return result;
 }
 
-internal u64
+base_api u64
 func str8_parse_int_binary(Str8 str) {
   UNIMPLEMENTED;
   return 0;
 }
 
-internal u64
+base_api u64
 func str8_parse_int_hex(Str8 str) {
   UNIMPLEMENTED;
   return 0;
 }
 
 
-internal Str8
+base_api Str8
 func str8_match_begin_float(Str8 str) {
   Str8 result = {0};
   UNIMPLEMENTED;
   return result;
 }
 
-internal f64
+base_api f64
 func str8_parse_float(Str8 str) {
   // NOTE jfd 14/02/26: This was written by gpt, I may try and optimize it in the future
 
@@ -615,7 +615,7 @@ func str8_parse_float(Str8 str) {
   return sign * value;
 }
 
-internal Str8
+base_api Str8
 func str8_copy(Arena *a, Str8 str) {
   u8 *s = push_array_no_zero(a, u8, str.len + 1);
   memory_copy(s, str.s, str.len);
@@ -623,7 +623,7 @@ func str8_copy(Arena *a, Str8 str) {
   return (Str8) { .s = s, .len = str.len };
 }
 
-internal force_inline Str8
+base_api force_inline Str8
 func str8_from_cstr(Arena *a, char *cstr) {
   Str8 str = {0};
   if(cstr) {
@@ -632,14 +632,14 @@ func str8_from_cstr(Arena *a, char *cstr) {
   return str8_copy(a, str);
 }
 
-internal force_inline char*
+base_api force_inline char*
 func cstr_from_str8(Arena *a, Str8 str) {
   Str8 s_ = str8_copy(a, str);
   char *s = (char*)s_.s;
   return s;
 }
 
-internal Str8
+base_api Str8
 func str8fv(Arena *a, char *fmt, va_list args) {
   va_list args2;
   va_copy(args2, args);
@@ -652,7 +652,7 @@ func str8fv(Arena *a, char *fmt, va_list args) {
   return result;
 }
 
-internal Str8
+base_api Str8
 func str8f(Arena *a, char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
@@ -661,7 +661,7 @@ func str8f(Arena *a, char *fmt, ...) {
   return result;
 }
 
-internal char*
+base_api char*
 func cstrf(Arena *a, char *fmt, ...) {
   va_list args;
   va_start(args, fmt);
@@ -670,7 +670,7 @@ func cstrf(Arena *a, char *fmt, ...) {
   return (char*)(result.s);
 }
 
-internal Str8
+base_api Str8
 func str8_to_lower(Arena *a, Str8 str) {
   Str8 lower_str = str8_copy(a, str);
 
@@ -682,7 +682,7 @@ func str8_to_lower(Arena *a, Str8 str) {
   return lower_str;
 }
 
-internal Str8
+base_api Str8
 func str8_to_upper(Arena *a, Str8 str) {
   Str8 upper_str = str8_copy(a, str);
 
@@ -694,7 +694,7 @@ func str8_to_upper(Arena *a, Str8 str) {
   return upper_str;
 }
 
-internal Str8
+base_api Str8
 func str8_chop_last_slash(Str8 str) {
   if(str.len > 0) {
     u8 *ptr = str.s + str.len - 1;
@@ -715,7 +715,7 @@ func str8_chop_last_slash(Str8 str) {
   return str;
 }
 
-internal Str8_list
+base_api Str8_list
 func str8_split_by_chars(Arena *a, Str8 str, u8 *sep_chars, s64 n_sep_chars) {
   Str8_list result = {0};
   Str8_node head = {0};
@@ -774,12 +774,12 @@ func str8_split_by_chars(Arena *a, Str8 str, u8 *sep_chars, s64 n_sep_chars) {
   return result;
 }
 
-internal force_inline Str8_list
+base_api force_inline Str8_list
 func str8_split_by_char(Arena *a, Str8 str, u8 sep_char) {
   return str8_split_by_chars(a, str, &sep_char, 1);
 }
 
-internal Str8_list
+base_api Str8_list
 func str8_split_by_str(Arena *a, Str8 str, Str8 sep) {
   Str8_list result = {0};
   Str8_node head = {0};
@@ -839,7 +839,7 @@ func str8_split_by_str(Arena *a, Str8 str, Str8 sep) {
   return result;
 }
 
-internal Str8
+base_api Str8
 func str8_cstr_capped(void *cstr, void *cap) {
   char *ptr = (char *)cstr;
   char *opl = (char *)cap;

@@ -2,7 +2,7 @@
 #define ARENA_C
 
 
-internal Arena*
+base_api Arena*
 func arena_create_ex(u64 size, b32 cannot_chain, void *backing_buffer) {
   b32 has_backing_buffer = 0;
   void *base = backing_buffer;
@@ -31,14 +31,14 @@ func arena_create_ex(u64 size, b32 cannot_chain, void *backing_buffer) {
   return arena;
 }
 
-internal Arena*
+base_api Arena*
 func arena_create_from_arena(u64 size, Arena *arena) {
   void *backing_buffer = arena_push(arena, MAX(size, ARENA_HEADER_SIZE), 1);
   Arena *result = arena_create_ex(MAX(size, ARENA_HEADER_SIZE), 1, backing_buffer);
   return result;
 }
 
-internal void
+base_api void
 func arena_destroy(Arena *arena) {
   ASSERT(arena);
 
@@ -56,7 +56,7 @@ func arena_destroy(Arena *arena) {
 
 }
 
-internal void*
+base_api void*
 func arena_push(Arena *arena, u64 size, u64 align) {
   ASSERT(arena);
 
@@ -108,7 +108,7 @@ func arena_push(Arena *arena, u64 size, u64 align) {
   return result;
 }
 
-internal u64
+base_api u64
 func arena_pos(Arena *arena) {
   ASSERT(arena);
 
@@ -117,7 +117,7 @@ func arena_pos(Arena *arena) {
   return pos;
 }
 
-internal void
+base_api void
 func arena_pop_to(Arena *arena, u64 pos) {
   ASSERT(arena);
 
@@ -136,12 +136,12 @@ func arena_pop_to(Arena *arena, u64 pos) {
   cur->pos = new_pos;
 }
 
-internal void
+base_api void
 func arena_clear(Arena *arena) {
   arena_pop_to(arena, 0);
 }
 
-internal void
+base_api void
 func arena_pop(Arena *arena, u64 amount) {
   u64 old_pos = arena_pos(arena);
   u64 new_pos = old_pos;
@@ -151,14 +151,14 @@ func arena_pop(Arena *arena, u64 amount) {
   arena_pop_to(arena, new_pos);
 }
 
-internal Arena_scope
+base_api Arena_scope
 func arena_scope_begin(Arena *arena) {
   u64 pos = arena_pos(arena);
   Arena_scope scope = { arena, pos };
   return scope;
 }
 
-internal void
+base_api void
 func arena_scope_end(Arena_scope scope) {
   arena_pop_to(scope.arena, scope.pos);
 }

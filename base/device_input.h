@@ -111,7 +111,7 @@ typedef enum Keyboard_key {
 } Keyboard_key;
 
 
-internal b32 is_modifier_key(Keyboard_key key);
+base_api b32 is_modifier_key(Keyboard_key key);
 
 
 #endif

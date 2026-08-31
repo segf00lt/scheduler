@@ -1,7 +1,7 @@
 
 set r0, 0       ; a = 0
 set r1, 1       ; b = 1
-set r2, 15      ; n = 6
+input r2      ; get n for fib(n) from user
 set r3, 0       ; i = 0
 
 loop:

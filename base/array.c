@@ -1,7 +1,7 @@
 #ifndef ARRAY_C
 #define ARRAY_C
 
-internal void
+base_api void
 func arr_init_(__Arr_header *arr, Arena *arena, s64 stride, s64 cap) {
   arr->count = 0;
   arr->cap = cap;
@@ -10,14 +10,14 @@ func arr_init_(__Arr_header *arr, Arena *arena, s64 stride, s64 cap) {
   memory_zero(arr->d, cap * stride);
 }
 
-internal void
+base_api void
 func slice_init_(__Slice_header *slice, Arena *arena, s64 stride, s64 count) {
   slice->count = count;
   slice->d = arena_push(arena, count * stride, 1);
   memory_zero(slice->d, count * stride);
 }
 
-internal void*
+base_api void*
 func arr_push_no_zero_(__Arr_header *arr, s64 stride, s64 push_count) {
   ASSERT(arr->d && arr->cap && arr->arena);
 

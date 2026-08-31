@@ -35,20 +35,20 @@ global read_only u64 ARENA_DEFAULT_SIZE = KB(64);
 #define arena_create(size) arena_create_ex(((u64)(size)), 0, (void*)0)
 #endif
 
-internal Arena* arena_create_ex(u64 size, b32 cannot_chain, void *backing_buffer);
-internal Arena* arena_create_from_arena(u64 size, Arena *arena);
+base_api Arena* arena_create_ex(u64 size, b32 cannot_chain, void *backing_buffer);
+base_api Arena* arena_create_from_arena(u64 size, Arena *arena);
 
-internal void arena_destroy(Arena *arena);
+base_api void arena_destroy(Arena *arena);
 
-internal void *arena_push(Arena *arena, u64 size, u64 align);
-internal u64   arena_pos(Arena *arena);
-internal void  arena_pop_to(Arena *arena, u64 pos);
+base_api void *arena_push(Arena *arena, u64 size, u64 align);
+base_api u64   arena_pos(Arena *arena);
+base_api void  arena_pop_to(Arena *arena, u64 pos);
 
-internal void arena_clear(Arena *arena);
-internal void arena_pop(Arena *arena, u64 amount);
+base_api void arena_clear(Arena *arena);
+base_api void arena_pop(Arena *arena, u64 amount);
 
-internal Arena_scope arena_scope_begin(Arena *arena);
-internal void arena_scope_end(Arena_scope scope);
+base_api Arena_scope arena_scope_begin(Arena *arena);
+base_api void arena_scope_end(Arena_scope scope);
 
 #define arena_scope(a) for(Arena_scope __scope__##__LINE__ = arena_scope_begin((a)); __scope__##__LINE__.arena != (Arena*)0; arena_scope_end(__scope__##__LINE__), __scope__##__LINE__.arena = (Arena*)0)
 

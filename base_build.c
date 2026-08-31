@@ -1,6 +1,6 @@
 
-#define BASE_SHARED
-#define PLATFORM_CORE_EXPORT
+#define BASE_EXPORT_STATIC
+#define PLATFORM_CORE_EXPORT_STATIC
 
 #include "base/base_include.h"
 #include "platform/platform.h"

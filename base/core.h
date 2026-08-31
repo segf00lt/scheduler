@@ -47,18 +47,6 @@
 ////////////////////////////////
 //~ rjf: Linkage Keyword Macros
 
-#if PLATFORM_WINDOWS
-# define shared_function C_LINKAGE __declspec(dllexport)
-#else
-# define shared_function C_LINKAGE
-#endif
-
-#ifdef BASE_SHARED
-#undef internal
-#define internal shared_function
-#endif
-
-
 #if LANG_CPP
 # define C_LINKAGE_BEGIN extern "C"{
 # define C_LINKAGE_END }
@@ -68,6 +56,49 @@
 # define C_LINKAGE_END
 # define C_LINKAGE
 #endif
+
+
+#if PLATFORM_WINDOWS
+# define shared_function C_LINKAGE __declspec(dllexport)
+#else
+# define shared_function C_LINKAGE
+#endif
+
+
+#if defined(BASE_EXPORT)
+
+#if PLATFORM_WINDOWS
+#define base_api __declspec(dllexport)
+#else
+#define base_api __attribute__((visibility("default")))
+#endif
+
+#elif defined(BASE_IMPORT)
+
+#if PLATFORM_WINDOWS
+#define base_api __declspec(dllimport)
+#else
+#define base_api extern
+#endif
+
+#elif defined(BASE_EXPORT_STATIC)
+
+#define base_api
+
+#elif defined(BASE_IMPORT_STATIC)
+
+#if LANG_CPP
+#define base_api extern "C"
+#else
+#define base_api extern
+#endif
+
+#else
+
+#define base_api internal
+
+#endif
+
 
 #ifndef alignof
 #if COMPILER_MSVC

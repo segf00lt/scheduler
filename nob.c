@@ -4,6 +4,12 @@
 #include "third_party/raylib/nob_raylib.c"
 
 int win32_build(void) {
+  nob_delete_file("scheduler.obj");
+  nob_delete_file("scheduler.lib");
+  nob_delete_file("scheduler.pdb");
+
+  nob_delete_file("base.obj");
+
   Nob_Cmd cmd = {0};
   nob_cmd_append(&cmd,
     "cl",
@@ -130,10 +136,10 @@ int linux_build(void) {
 int main(int argc, char **argv) {
   NOB_GO_REBUILD_URSELF(argc, argv);
 
-  if(!linux_build()) return 1;
+  if(!win32_build()) return 1;
 
   return 0;
-  if(!win32_build()) return 1;
+  if(!linux_build()) return 1;
   if(!build_raylib_win32()) return 1;
 
 

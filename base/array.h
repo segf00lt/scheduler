@@ -108,9 +108,9 @@ struct name {                 \
 
 #define slice_init(slice, n, arena) (slice_init_(header_ptr_from_slice(slice), arena, slice_stride(slice), (n)), (slice).count = (s64)(n))
 
-internal void  arr_init_(__Arr_header *arr, Arena *arena, s64 stride, s64 cap);
-internal void* arr_push_no_zero_(__Arr_header *arr, s64 stride, s64 push_count);
+base_api void  arr_init_(__Arr_header *arr, Arena *arena, s64 stride, s64 cap);
+base_api void* arr_push_no_zero_(__Arr_header *arr, s64 stride, s64 push_count);
 
-internal void  slice_init_(__Slice_header *slice, Arena *arena, s64 stride, s64 count);
+base_api void  slice_init_(__Slice_header *slice, Arena *arena, s64 stride, s64 count);
 
 #endif

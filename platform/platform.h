@@ -63,8 +63,22 @@ struct Platform {
 #define platform_core_api extern
 #endif
 
+#elif defined(PLATFORM_CORE_EXPORT_STATIC)
+
+#define platform_core_api
+
+#elif defined(PLATFORM_CORE_IMPORT_STATIC)
+
+#if LANG_CPP
+#define platform_core_api extern "C"
 #else
+#define platform_core_api extern
+#endif
+
+#else
+
 #define platform_core_api internal
+
 #endif
 
 

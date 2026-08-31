@@ -105,8 +105,9 @@ func platform_read_entire_file(Arena *arena, char *path) {
   ASSERT(got_size);
   data.len = file_size.QuadPart;
 
-  data.s = push_array_no_zero(arena, u8, data.len);
+  data.s = push_array_no_zero(arena, u8, data.len+1);
   ASSERT(data.s);
+  data.s[data.len] = 0;
 
   #if 0
   u8 *ptr = data.s;
