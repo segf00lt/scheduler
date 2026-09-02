@@ -462,7 +462,11 @@ func assemble(Arena *arena, Str8 source, u32 *inst_count_out) {
             str8_match_lit("mul", op) ||
             str8_match_lit("div", op) ||
             str8_match_lit("lt", op)  ||
-            str8_match_lit("gte", op)) {
+            str8_match_lit("ult", op)  ||
+            str8_match_lit("gte", op) ||
+            str8_match_lit("ugte", op) ||
+            0
+          ) {
 
       Str8 a = parse_token(&at);
 
@@ -491,9 +495,17 @@ func assemble(Arena *arena, Str8 source, u32 *inst_count_out) {
         inst.opcode = OP_DIV;
       }
       else if(str8_match_lit("lt", op)) {
+        inst.opflags |= OPFLAG_SIGNED;
         inst.opcode = OP_LT;
       }
       else if(str8_match_lit("gte", op)) {
+        inst.opflags |= OPFLAG_SIGNED;
+        inst.opcode = OP_GTE;
+      }
+      else if(str8_match_lit("ult", op)) {
+        inst.opcode = OP_LT;
+      }
+      else if(str8_match_lit("ugte", op)) {
         inst.opcode = OP_GTE;
       }
     }

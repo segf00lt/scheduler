@@ -41,6 +41,15 @@ enum Opcode {
   #undef X
 };
 
+enum Scheduler_mode {
+  SCHED_MODE_FIFO = 0,
+  SCHED_MODE_ROUND_ROBIN,
+  SCHED_MODE_SHORTEST_JOB_FIRST,
+  SCHED_MODE_SHORTEST_TIME_REMAINING_FIRST,
+  SCHED_MODE_PRIORITY,
+  SCHED_MODE_CUSTOM,
+};
+
 enum Process_status {
   PROC_STAT_RUN,
   PROC_STAT_EXIT = 1,
@@ -88,13 +97,22 @@ internal void push_process_to_queue(Process_queue *process_queue, Process_state 
 
 internal Process_state* remove_process_from_queue_return_next(Process_queue *process_queue, Process_state *process_state);
 
-internal void process_scheduler(Process_queue initial_process_queue);
+internal force_inline f32 exponential_moving_average(f32 avg, f32 sample, f32 coefficient);
 
-internal void process_runner(Process_state *process_state);
+internal int compare_processes_by_avg_quantum_used(const void *a, const void *b);
+
+internal int compare_processes_by_priority(const void *a, const void *b);
+
+internal int compare_processes_by_instruction_count(const void *a, const void *b);
+
+internal void process_scheduler(Arena *a, Process_queue initial_process_queue);
+
+internal void process_runner(Process_state *process_state, bool ignore_quantum);
 
 internal Program load_program(char *code_path, Arena *a);
 
 internal Process_state* create_process(Program program, Arena *a);
 
+internal Process_state* create_process_with_priority(u32 priority, Program program, Arena *a);
 
 #endif

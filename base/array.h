@@ -95,7 +95,7 @@ struct name {                 \
 // NOTE ~jfd 23/12/2025: ordered insert
 #define arr_insert(array, i, elem) \
 ( \
-  arr_push_no_zero_(header_ptr_from_array((array)), arr_stride((array)), 1), \
+  arr_push_no_zero_(header_ptr_from_arr((array)), arr_stride((array)), 1), \
   memory_copy((void*)&(array).d[i + 1], (void*)&(array).d[i], arr_stride((array)) * ((array).count - i)), \
   (array).d[i] = elem \
 )
