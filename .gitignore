@@ -39,7 +39,6 @@ rule110
 __jcc__wrap__*
 help
 help.py
-.vscode/
 output
 output2
 jcc.debug

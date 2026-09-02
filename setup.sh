@@ -1,3 +1,3 @@
 #!/bin/sh
 
-cc nob.c -o nob && ./nob
+cc nob.c -o nob.exe && ./nob.exe
