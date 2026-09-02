@@ -385,7 +385,7 @@ func assemble(Arena *arena, Str8 source, u32 *inst_count_out) {
       continue;
     }
 
-    Inst inst = {0};
+    Inst inst = {};
 
 
     /* ============================================================
@@ -555,10 +555,6 @@ func assemble(Arena *arena, Str8 source, u32 *inst_count_out) {
     else if(str8_match_lit("input", op)) {
 
       Str8 a = parse_token(&at);
-
-      skip_comma(&at);
-
-      Str8 b = parse_token(&at);
 
       inst.opcode = OP_INPUT;
       inst.ra = (u8)parse_register(a);

@@ -68,6 +68,9 @@ struct Process_state {
   Process_state *next;
   Process_state *prev;
 
+  u32 quantum_used;
+  f32 avg_quantum_used;
+
   Inst *instructions;
   u32 pc;
   u32 max_pc_value;
