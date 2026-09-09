@@ -1,5 +1,5 @@
-#ifndef PLATFORM_MACOS_C
-#define PLATFORM_MACOS_C
+#ifndef PLATFORM_MAC_C
+#define PLATFORM_MAC_C
 
 // globals
 

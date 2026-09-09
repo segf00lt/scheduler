@@ -1,7 +1,7 @@
-#ifndef PLATFORM_CORE_MACOS_C
-#define PLATFORM_CORE_MACOS_C
+#ifndef PLATFORM_CORE_MAC_C
+#define PLATFORM_CORE_MAC_C
 
-#ifndef PLATFORM_MACOS_H
+#ifndef PLATFORM_MAC_H
 #undef internal
 
 #include <stdio.h>

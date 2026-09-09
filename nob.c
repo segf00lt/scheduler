@@ -156,30 +156,134 @@ int linux_build(void) {
 
 
 
+int mac_build(void) {
+  nob_log(NOB_INFO, "mac build");
+
+  Nob_Cmd cmd = {0};
+
+  nob_cmd_append(&cmd,
+    "clang++",
+    "-std=c++11",
+    "-Wall",
+    "-Wextra",
+    "-Wno-type-limits",
+    "-Wno-unused-variable",
+    "-Wno-write-strings",
+    "-Wno-missing-field-initializers",
+    "-Wno-unused-parameter",
+    "-fpermissive",
+    "-g",
+    "-O0",
+    "-c",
+    "scheduler_build.cpp",
+    "-o",
+    "scheduler.o"
+  );
+  Nob_Proc nob_proc = nob_cmd_run_async_and_reset(&cmd);
+
+  nob_cmd_append(&cmd,
+    "clang",
+    "-std=c11",
+    "-Wall",
+    "-Wextra",
+    "-Wno-unused-variable",
+    "-Wno-unused-parameter",
+    "-Wno-sign-compare",
+    "-g",
+    "-O0",
+    "-c",
+    "base_build.c",
+    "-o",
+    "base.o"
+  );
+  if(!nob_cmd_run_sync_and_reset(&cmd)) return 0;
+
+  if(!nob_proc_wait(nob_proc)) return 0;
+
+  nob_cmd_append(&cmd,
+    "clang++",
+    "-v",
+    "-g",
+    "-O0",
+    "scheduler.o",
+    "base.o",
+    "-o",
+    "scheduler"
+  );
+  if(!nob_cmd_run_sync_and_reset(&cmd)) return 0;
+
+  return 1;
+}
+
+int build_clay_test_mac(void) {
+
+  Nob_Cmd cmd = {0};
+
+  nob_cmd_append(&cmd,
+    "clang",
+    "-std=c11",
+    "-Wall",
+    "-Wextra",
+    "-Wno-unused-variable",
+    "-Wno-unused-parameter",
+    "-Wno-sign-compare",
+    "-Wno-missing-braces",
+    "-g",
+    "-O0",
+    "clay_test_build.c",
+
+    "-L./third_party/raylib/build/debug/",
+    "-I./third_party/raylib/",
+    "-lraylib",
+    "-Wl,-rpath,./third_party/raylib/build/debug/",
+
+    "-o",
+    "clay_test"
+  );
+  if(!nob_cmd_run_sync_and_reset(&cmd)) return 0;
+
+  return 1;
+}
+
+
+#if PLATFORM_LINUX
+#define build linux_build
+#define build_raylib build_raylib_linux
+#elif PLATFORM_WINDOWS
+#define build win32_build
+#define build_raylib build_raylib_win32
+#elif PLATFORM_MAC
+#define build mac_build
+#define build_raylib build_raylib_mac
+#endif
+
+
 int main(int argc, char **argv) {
   NOB_GO_REBUILD_URSELF(argc, argv);
 
+
+  #if 1
+  if(!build_clay_test_mac()) return 1;
+  return 0;
+  #endif
+
+
   if(argc == 1) {
-    #if PLATFORM_LINUX
-    if(!linux_build()) return 1;
-    #elif PLATFORM_WINDOWS
-    if(!win32_build()) return 1;
-    #elif PLATFORM_MAC
-    UNIMPLEMENTED;
-    #endif
+    if(!build()) return 1;
     return 0;
+  }
+
+  if(!strcmp("raylib", argv[1])) {
+    if(!build_raylib()) return 1;
   }
 
   if(!strcmp("linux", argv[1])) {
     if(!linux_build()) return 1;
   } else if(!strcmp("windows", argv[1])) {
     if(!win32_build()) return 1;
+  } else if(!strcmp("mac", argv[1])) {
+    if(!mac_build()) return 1;
   }
-
-  return 0;
-
-  if(!build_raylib_win32()) return 1;
-
 
   return 0;
 }

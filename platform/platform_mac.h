@@ -1,5 +1,5 @@
-#ifndef PLATFORM_MACOS_H
-#define PLATFORM_MACOS_H
+#ifndef PLATFORM_MAC_H
+#define PLATFORM_MAC_H
 
 // NOTE jfd: mach.h uses internal somewhere
 #undef internal

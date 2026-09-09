@@ -12,13 +12,13 @@
 
 #elif PLATFORM_LINUX
 
-#include "platform_core_win32.c"
+#include "platform_core_linux.c"
 #include "platform_linux.c"
 
 #elif PLATFORM_MAC
 
-#include "platform_core_macos.c"
-#include "platform_macos.c"
+#include "platform_core_mac.c"
+#include "platform_mac.c"
 
 #elif PLATFORM_WEB
 

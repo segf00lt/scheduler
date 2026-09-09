@@ -6,9 +6,9 @@
 
 #include <stdio.h>
 
-#include "scheduler.hpp"
-#include "assembler.hpp"
+#include "app/scheduler.hpp"
+#include "app/assembler.hpp"
 
-#include "scheduler.cpp"
+#include "app/scheduler.cpp"
 
-#include "assembler.cpp"
+#include "app/assembler.cpp"

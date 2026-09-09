@@ -357,9 +357,9 @@ int main(int argc, char **argv) {
     }
   }
 
-  Program fibonacci_program = load_program("fibonacci.asm", a);
-  Program test_program = load_program("test2.asm", a);
-  Program factorial_program = load_program("factorial.asm", a);
+  Program fibonacci_program = load_program("tests/fibonacci.asm", a);
+  Program test_program = load_program("tests/test2.asm", a);
+  Program factorial_program = load_program("tests/factorial.asm", a);
 
   arena_scope(a) {
     Process_queue process_queue = {0};

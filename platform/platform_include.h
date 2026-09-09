@@ -15,7 +15,7 @@
 
 #elif PLATFORM_MAC
 
-#include "platform_macos.h"
+#include "platform_mac.h"
 
 #elif PLATFORM_WEB
 
