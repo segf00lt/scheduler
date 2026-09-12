@@ -7,6 +7,12 @@
 #define PI 3.14159265358979323846f
 
 
+// TODO jfd 12/09/26: This needs to be simpler
+#if defined(BASE_EXPORT) || defined(BASE_IMPORT) || defined(BASE_EXPORT_STATIC) || defined(BASE_IMPORT_STATIC)
+#undef force_inline
+#define force_inline
+#endif
+
 TYPEDEF_VEC2(s8);
 TYPEDEF_VEC2(s16);
 TYPEDEF_VEC2(s32);
@@ -45,6 +51,7 @@ struct v4 {
   f32 w;
 };
 
+base_api force_inline f32 exponential_moving_average(f32 avg, f32 sample, f32 coefficient);
 
 base_api force_inline f32 floor_f32(f32 f);
 
@@ -120,5 +127,10 @@ base_api force_inline v2_u32 cast_v2_f32_to_u32(v2 v);
 base_api force_inline v2     cast_v2_u32_to_f32(v2_u32 v);
 base_api force_inline v2     cast_v2_s32_to_f32(v2_s32 v);
 base_api force_inline v2_s32 cast_v2_u32_to_s32(v2_u32 v);
+
+#if defined(BASE_EXPORT) || defined(BASE_IMPORT) || defined(BASE_EXPORT_STATIC) || defined(BASE_IMPORT_STATIC)
+#undef force_inline
+#define force_inline _force_inline
+#endif
 
 #endif

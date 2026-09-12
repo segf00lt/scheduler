@@ -39,10 +39,11 @@
 #endif
 
 #if COMPILER_MSVC
-# define force_inline __forceinline
+# define _force_inline __forceinline
 #elif COMPILER_CLANG || COMPILER_GCC
-# define force_inline __attribute__((always_inline)) inline
+# define _force_inline __attribute__((always_inline)) inline
 #endif
+#define force_inline _force_inline
 
 ////////////////////////////////
 //~ rjf: Linkage Keyword Macros
@@ -158,11 +159,6 @@
 //#define snprintf stbsp_snprintf
 //#endif
 
-#define VEC2_IHAT ((Vector2){1.0f, 0.0f})
-#define VEC2_JHAT ((Vector2){0.0f, 1.0f})
-#define VEC2_ORIGIN ((Vector2){0.0f,0.0f})
-#define VEC2_ZERO ((Vector2){0.0f,0.0f})
-#define f32_nEGATIVE_ZERO (u32)(0x80000000)
 #define member_size(type, member) sizeof(((type*)0)->member)
 #define member_offset(type, member) offsetof(type, member)
 
@@ -176,7 +172,6 @@
 #define THOUSAND(n)   ((n)*1000)
 #define MILLION(n)    ((n)*1000000)
 #define BILLION(n)    ((n)*1000000000)
-
 
 ////////////////////////////////
 //~ rjf: Asserts

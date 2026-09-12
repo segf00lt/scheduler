@@ -86,7 +86,7 @@ internal void
 func my_button(Clay_String text) {
   CLAY(my_button_style(Clay_Hovered())) {
     Clay_OnHover(&handle_my_button_interaction, (intptr_t)text.chars);
-    CLAY_TEXT(text, CLAY_TEXT_CONFIG({ .fontSize = 16, .textColor = {0, 0, 0, 255}, .textAlignment = CLAY_TEXT_ALIGN_CENTER }));
+    CLAY_TEXT(text, CLAY_TEXT_CONFIG({ .fontId = 1, .fontSize = 16, .textColor = {0, 0, 0, 255}, .textAlignment = CLAY_TEXT_ALIGN_CENTER }));
   }
 }
 

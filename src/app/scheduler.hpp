@@ -41,6 +41,13 @@ enum Opcode {
   #undef X
 };
 
+global read_only char *opcode_strings[] = {
+"NONE",
+#define X(x) #x,
+OPCODES
+#undef X
+};
+
 enum Scheduler_mode {
   SCHED_MODE_FIFO = 0,
   SCHED_MODE_ROUND_ROBIN,
@@ -96,8 +103,6 @@ struct Process_queue {
 internal void push_process_to_queue(Process_queue *process_queue, Process_state *process_state);
 
 internal Process_state* remove_process_from_queue_return_next(Process_queue *process_queue, Process_state *process_state);
-
-internal force_inline f32 exponential_moving_average(f32 avg, f32 sample, f32 coefficient);
 
 internal int compare_processes_by_avg_quantum_used(const void *a, const void *b);
 

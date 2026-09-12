@@ -14,7 +14,7 @@ loop:
 
     set r6, 1
     add r3, r3, r6
-    print r0 ; show current iteration
+    ; print r0 ; show current iteration
 
     goto loop
 

@@ -3,12 +3,22 @@
 
 #include <math.h>
 
+#if defined(BASE_EXPORT) || defined(BASE_IMPORT) || defined(BASE_EXPORT_STATIC) || defined(BASE_IMPORT_STATIC)
+#undef force_inline
+#define force_inline
+#endif
+
 base_api force_inline f32
 func floor_f32(f32 f) {
   // TODO jfd: reimplement
   return (f32)floorf(f);
 }
 
+base_api force_inline f32
+func exponential_moving_average(f32 avg, f32 sample, f32 coefficient) {
+  f32 result = (1.0-coefficient)*avg + coefficient*sample;
+  return result;
+}
 
 base_api force_inline f64
 func floor_f64(f64 f) {
@@ -572,7 +582,10 @@ func cast_v2_s32_to_f32(v2_s32 v) {
   return result;
 }
 
-
+#if defined(BASE_EXPORT) || defined(BASE_IMPORT) || defined(BASE_EXPORT_STATIC) || defined(BASE_IMPORT_STATIC)
+#undef force_inline
+#define force_inline _force_inline
+#endif
 
 
 #endif

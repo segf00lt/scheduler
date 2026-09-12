@@ -26,13 +26,6 @@ func remove_process_from_queue_return_next(Process_queue *process_queue, Process
   return next;
 }
 
-
-internal force_inline f32
-func exponential_moving_average(f32 avg, f32 sample, f32 coefficient) {
-  f32 result = (1.0-coefficient)*avg + coefficient*sample;
-  return result;
-}
-
 internal int
 func compare_processes_by_avg_quantum_used(const void *a, const void *b) {
   Process_state *pa = *(Process_state**)a;
@@ -108,25 +101,38 @@ func process_scheduler(Arena *a, Process_queue initial_process_queue) {
         proc_array[i++] = p;
       }
 
+      // NOTE jfd: Leiam isso!!!
+      // Escalonamento pode ser feito ordenando a fila de processos. No nosso caso isso basicamente quer
+      // dizer escrever uma função de comparação para o qsort(). Essa função deve ter a seguinte interface:
+      //
+      // int comparar(const void *a, const void *b);
+      //
+      // Como não estamos preocupados com multithreading, podem usar qualquer variável global dentro da função
+      // de comparação. Veja compare_processes_by_instruction_count() ou qualquer uma das outras para uma ideia de como
+      // escrever uma dessas funções
       switch(scheduler_mode) {
         default:
         UNREACHABLE;
         break;
+
         case SCHED_MODE_FIFO:
         ignore_quantum = true;
-        break;
         case SCHED_MODE_ROUND_ROBIN:
         break;
+
         case SCHED_MODE_SHORTEST_JOB_FIRST:
         ignore_quantum = true;
         qsort((void*)proc_array, n, sizeof(Process_state*), compare_processes_by_instruction_count);
         break;
+
         case SCHED_MODE_SHORTEST_TIME_REMAINING_FIRST:
         qsort((void*)proc_array, n, sizeof(Process_state*), compare_processes_by_avg_quantum_used);
         break;
+
         case SCHED_MODE_PRIORITY:
         qsort((void*)proc_array, n, sizeof(Process_state*), compare_processes_by_priority);
         break;
+
         case SCHED_MODE_CUSTOM:
         UNIMPLEMENTED;
         break;
@@ -207,6 +213,10 @@ func process_runner(Process_state *process_state, bool ignore_quantum) {
     ASSERT(pc >= 0 && pc <= process_state->max_pc_value);
 
     Inst inst = instructions[pc];
+
+    #if 0
+    printf("%u:\topcode=%s,\t\topflags=%u, ra=%u, rb=%u, rc=%u, imm=%u\n", pc, opcode_strings[inst.opcode], inst.opflags, inst.ra, inst.rb, inst.rc, inst.imm);
+    #endif
 
     switch(inst.opcode) {
       default:
@@ -338,25 +348,60 @@ func create_process_with_priority(u32 priority, Program program, Arena *a) {
 int main(int argc, char **argv) {
   Arena *a = arena_create(MB(1));
 
-  if(argc > 1) {
-    if(!strcmp("fifo", argv[1])) {
-      scheduler_mode = SCHED_MODE_FIFO;
-    } else if(!strcmp("round_robin", argv[1])) {
-      scheduler_mode = SCHED_MODE_ROUND_ROBIN;
-    } else if(!strcmp("sjf", argv[1])) {
-      scheduler_mode = SCHED_MODE_SHORTEST_JOB_FIRST;
-    } else if(!strcmp("strf", argv[1])) {
-      scheduler_mode = SCHED_MODE_SHORTEST_TIME_REMAINING_FIRST;
-    } else if(!strcmp("priority", argv[1])) {
-      scheduler_mode = SCHED_MODE_PRIORITY;
-    } else if(!strcmp("custom", argv[1])) {
-      scheduler_mode = SCHED_MODE_CUSTOM;
-    } else {
-      printf("unknown option '%s'\n", argv[1]);
-      return 1;
-    }
+  if(argc < 3) {
+    printf("missing arguments\n");
+    return 1;
   }
 
+  if(!strcmp("fifo", argv[1])) {
+    scheduler_mode = SCHED_MODE_FIFO;
+  } else if(!strcmp("round_robin", argv[1])) {
+    scheduler_mode = SCHED_MODE_ROUND_ROBIN;
+  } else if(!strcmp("sjf", argv[1])) {
+    scheduler_mode = SCHED_MODE_SHORTEST_JOB_FIRST;
+  } else if(!strcmp("strf", argv[1])) {
+    scheduler_mode = SCHED_MODE_SHORTEST_TIME_REMAINING_FIRST;
+  } else if(!strcmp("priority", argv[1])) {
+    scheduler_mode = SCHED_MODE_PRIORITY;
+  } else if(!strcmp("custom", argv[1])) {
+    scheduler_mode = SCHED_MODE_CUSTOM;
+  } else {
+    printf("unknown option '%s'\n", argv[1]);
+    return 1;
+  }
+
+  char *program_path = argv[2];
+  if(!platform_file_exists(program_path)) {
+    printf("no such file '%s'\n", program_path);
+  }
+
+  {
+    Program program = load_program(program_path, a);
+    Process_queue process_queue = {0};
+
+    Process_state *p0 = create_process(program, a);
+
+    push_process_to_queue(&process_queue, p0);
+
+    process_scheduler(a, process_queue);
+  }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  #if 0
   Program fibonacci_program = load_program("tests/fibonacci.asm", a);
   Program test_program = load_program("tests/test2.asm", a);
   Program factorial_program = load_program("tests/factorial.asm", a);
@@ -370,6 +415,7 @@ int main(int argc, char **argv) {
 
     process_scheduler(a, process_queue);
   }
+  #endif
 
   #if 0
   arena_scope (a) {

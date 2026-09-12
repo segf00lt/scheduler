@@ -1,7 +1,7 @@
 #define NOB_IMPLEMENTATION
 #include "nob.h"
 
-#include "third_party/raylib/nob_raylib.c"
+#include "src/third_party/raylib/nob_raylib.c"
 
 
 # if defined(_WIN32)
@@ -14,7 +14,7 @@
 #  error This compiler/OS combo is not supported.
 # endif
 
-int win32_build(void) {
+int build_scheduler_win32(void) {
   nob_log(NOB_INFO, "windows build");
 
   nob_delete_file("scheduler.obj");
@@ -44,7 +44,7 @@ int win32_build(void) {
     "/c",
     "/Fo:scheduler.obj",
     "/FS",
-    "scheduler_build.cpp",
+    "src/scheduler_build.cpp",
     ""
   );
   Nob_Proc nob_proc = nob_cmd_run_async_and_reset(&cmd);
@@ -66,7 +66,7 @@ int win32_build(void) {
     "/Od",
     "/MDd",
     "/c",
-    "base_build.c",
+    "src/base_build.c",
     "/Fo:base.obj",
     "/FS",
     ""
@@ -96,7 +96,7 @@ int win32_build(void) {
   return 1;
 }
 
-int linux_build(void) {
+int build_scheduler_linux(void) {
   nob_log(NOB_INFO, "linux build");
 
   Nob_Cmd cmd = {0};
@@ -115,7 +115,7 @@ int linux_build(void) {
     "-g",
     "-O0",
     "-c",
-    "scheduler_build.cpp",
+    "src/scheduler_build.cpp",
     "-o",
     "scheduler.o"
   );
@@ -132,7 +132,7 @@ int linux_build(void) {
     "-g",
     "-O0",
     "-c",
-    "base_build.c",
+    "src/base_build.c",
     "-o",
     "base.o"
   );
@@ -156,7 +156,7 @@ int linux_build(void) {
 
 
 
-int mac_build(void) {
+int build_scheduler_mac(void) {
   nob_log(NOB_INFO, "mac build");
 
   Nob_Cmd cmd = {0};
@@ -175,7 +175,7 @@ int mac_build(void) {
     "-g",
     "-O0",
     "-c",
-    "scheduler_build.cpp",
+    "src/scheduler_build.cpp",
     "-o",
     "scheduler.o"
   );
@@ -192,7 +192,7 @@ int mac_build(void) {
     "-g",
     "-O0",
     "-c",
-    "base_build.c",
+    "src/base_build.c",
     "-o",
     "base.o"
   );
@@ -215,6 +215,37 @@ int mac_build(void) {
   return 1;
 }
 
+int build_clay_test_linux(void) {
+
+  Nob_Cmd cmd = {0};
+
+  nob_cmd_append(&cmd,
+    "gcc",
+    "-std=c11",
+    "-Wall",
+    "-Wextra",
+    "-Wno-unused-variable",
+    "-Wno-unused-parameter",
+    "-Wno-sign-compare",
+    "-Wno-missing-braces",
+    "-g",
+    "-O0",
+    "src/clay_test_build.c",
+
+    "-lm",
+    "-L./third_party/raylib/build/debug/",
+    "-I./third_party/raylib/",
+    "-lraylib",
+    "-Wl,-rpath,./third_party/raylib/build/debug/",
+
+    "-o",
+    "clay_test"
+  );
+  if(!nob_cmd_run_sync_and_reset(&cmd)) return 0;
+
+  return 1;
+}
+
 int build_clay_test_mac(void) {
 
   Nob_Cmd cmd = {0};
@@ -230,7 +261,7 @@ int build_clay_test_mac(void) {
     "-Wno-missing-braces",
     "-g",
     "-O0",
-    "clay_test_build.c",
+    "src/clay_test_build.c",
 
     "-L./third_party/raylib/build/debug/",
     "-I./third_party/raylib/",
@@ -247,25 +278,33 @@ int build_clay_test_mac(void) {
 
 
 #if PLATFORM_LINUX
-#define build linux_build
+
+#define build_scheduler build_scheduler_linux
 #define build_raylib build_raylib_linux
+#define build_clay_test build_clay_test_linux
+
 #elif PLATFORM_WINDOWS
-#define build win32_build
+
+#define build_scheduler build_scheduler_win32
 #define build_raylib build_raylib_win32
+#define build_clay_test build_clay_test_win32
+
 #elif PLATFORM_MAC
-#define build mac_build
+
+#define build_scheduler build_scheduler_mac
 #define build_raylib build_raylib_mac
+#define build_clay_test build_clay_test_mac
+
 #endif
+
+
+// NOTE jfd: define the main project build function
+#define build build_scheduler
+
 
 
 int main(int argc, char **argv) {
   NOB_GO_REBUILD_URSELF(argc, argv);
-
-
-  #if 1
-  if(!build_clay_test_mac()) return 1;
-  return 0;
-  #endif
 
 
   if(argc == 1) {
@@ -273,17 +312,18 @@ int main(int argc, char **argv) {
     return 0;
   }
 
+  if(!strcmp("scheduler", argv[1])) {
+    if(!build_scheduler()) return 1;
+  }
+
+  if(!strcmp("clay_test", argv[1])) {
+    if(!build_clay_test()) return 1;
+  }
+
   if(!strcmp("raylib", argv[1])) {
     if(!build_raylib()) return 1;
   }
 
-  if(!strcmp("linux", argv[1])) {
-    if(!linux_build()) return 1;
-  } else if(!strcmp("windows", argv[1])) {
-    if(!win32_build()) return 1;
-  } else if(!strcmp("mac", argv[1])) {
-    if(!mac_build()) return 1;
-  }
 
   return 0;
 }
