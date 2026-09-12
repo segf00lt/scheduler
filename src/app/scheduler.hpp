@@ -57,6 +57,7 @@ enum Scheduler_mode {
   SCHED_MODE_CUSTOM,
 };
 
+
 enum Process_status {
   PROC_STAT_RUN,
   PROC_STAT_EXIT = 1,
@@ -99,6 +100,24 @@ struct Process_queue {
   Process_state *last;
   s64 n;
 };
+
+
+// C++ is really complicated
+class Scheduling_algorithm {
+public:
+  bool ignore_quantum;
+  char *name;
+
+  Scheduling_algorithm(char *name, bool ignore_quantum = false) {
+    this->name = name;
+    this->ignore_quantum = ignore_quantum;
+  }
+
+  virtual int compare(const void *a, const void *b);
+
+};
+
+
 
 internal void push_process_to_queue(Process_queue *process_queue, Process_state *process_state);
 

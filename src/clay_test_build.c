@@ -21,4 +21,4 @@
 #include "third_party/clay-0.14/clay.h"
 #include "third_party/clay-0.14/renderers/raylib/clay_renderer_raylib.c"
 
-#include "app/clay_test.c"
+#include "test/clay_test.c"

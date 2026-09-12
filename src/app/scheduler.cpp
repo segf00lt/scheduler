@@ -101,19 +101,8 @@ func process_scheduler(Arena *a, Process_queue initial_process_queue) {
         proc_array[i++] = p;
       }
 
-      // NOTE jfd: Leiam isso!!!
-      // Escalonamento pode ser feito ordenando a fila de processos. No nosso caso isso basicamente quer
-      // dizer escrever uma função de comparação para o qsort(). Essa função deve ter a seguinte interface:
-      //
-      // int comparar(const void *a, const void *b);
-      //
-      // Como não estamos preocupados com multithreading, podem usar qualquer variável global dentro da função
-      // de comparação. Veja compare_processes_by_instruction_count() ou qualquer uma das outras para uma ideia de como
-      // escrever uma dessas funções
+      // NOTE jfd: schedule processes by sorting the process queue
       switch(scheduler_mode) {
-        default:
-        UNREACHABLE;
-        break;
 
         case SCHED_MODE_FIFO:
         ignore_quantum = true;
@@ -344,7 +333,6 @@ func create_process_with_priority(u32 priority, Program program, Arena *a) {
   return process_state;
 }
 
-
 int main(int argc, char **argv) {
   Arena *a = arena_create(MB(1));
 
@@ -353,6 +341,7 @@ int main(int argc, char **argv) {
     return 1;
   }
 
+  // NOTE jfd: parse arguments
   if(!strcmp("fifo", argv[1])) {
     scheduler_mode = SCHED_MODE_FIFO;
   } else if(!strcmp("round_robin", argv[1])) {
