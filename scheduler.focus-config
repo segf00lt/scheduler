@@ -30,7 +30,8 @@ auto_jump_to_error:                true
 error_regex:                       ^(?P<file>.*):(?P<line>\d+):(?P<col>\d+): (?P<type>fatal error|error|warning): (?P<msg>.*)( \[(?P<msg1>.*)\])?$
 
 [build]
-build_command: %BUILD_WORKING_DIR%/nob.exe
+build_command: %BUILD_WORKING_DIR%/nob.exe clay_test
+# build_command: %BUILD_WORKING_DIR%/nob.exe
 # build_command: %BUILD_WORKING_DIR%/nob
 key_binding: F9
 

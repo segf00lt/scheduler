@@ -57,10 +57,10 @@ func _str8_lit_helper(u8 *s, s64 len) {
   return result;
 }
 
-#define str8_lit(strlit) _str8_lit_helper((u8*)strlit, sizeof(strlit) - 1)
+#define str8_lit(strlit) _str8_lit_helper((u8*)strlit, CLAMP_BOT((s64)(sizeof(strlit) - (s64)1), (s64)0))
 
 #else
-#define str8_lit(strlit) ((Str8){ .s = (u8*)strlit, .len = sizeof(strlit) - 1 })
+#define str8_lit(strlit) ((Str8){ .s = (u8*)strlit, .len = CLAMP_BOT((s64)(sizeof(strlit) - (s64)1), (s64)0) })
 
 #endif
 
@@ -108,7 +108,7 @@ base_api Str8 str8_get_line(Str8 str, s64 start_pos);
 base_api Str8 str8_get_line_no_strip(Str8 str, s64 start_pos);
 base_api Str8 str8_strip_whitespace(Str8 str);
 
-#define is_space(c) (!!('\0' <= (c) && (c) <= ' '))
+#define is_space(c) (!!('\0' < (c) && (c) <= ' '))
 #define is_upper(c) (!!('A' <= (c) && (c) <= 'Z'))
 #define is_lower(c) (!!('a' <= (c) && (c) <= 'z'))
 #define to_lower(c) (is_upper(c) ? ((c) - 'A' + 'a') : (c))
