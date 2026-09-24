@@ -2,6 +2,7 @@
 #include "nob.h"
 
 #include "src/third_party/raylib/nob_raylib.c"
+#include "src/third_party/imgui-1.92.7/nob_imgui.c"
 
 
 # if defined(_WIN32)
@@ -215,6 +216,43 @@ int build_scheduler_mac(void) {
   return 1;
 }
 
+int build_imgui_test_linux(void) {
+
+  Nob_Cmd cmd = {0};
+
+  nob_cmd_append(&cmd,
+    "g++",
+    "-std=c++11",
+    "-Wall",
+    "-Wextra",
+    "-Wno-unused-variable",
+    "-Wno-unused-parameter",
+    "-Wno-sign-compare",
+    "-Wno-missing-braces",
+    "-Wno-missing-field-initializers",
+    "-g",
+    "-O0",
+    "src/imgui_test_build.cpp",
+
+    "-I./src/third_party/raylib/",
+    "-I./src/third_party/imgui-1.92.7/",
+
+    "-lm",
+    "-L./src/third_party/raylib/build/debug/",
+    "-lraylib",
+    "-Wl,-rpath,./src/third_party/raylib/build/debug/",
+
+    "-L./src/third_party/imgui-1.92.7/",
+    "-limgui",
+
+    "-o",
+    "imgui_test"
+  );
+  if(!nob_cmd_run_sync_and_reset(&cmd)) return 0;
+
+  return 1;
+}
+
 int build_clay_test_linux(void) {
 
   Nob_Cmd cmd = {0};
@@ -233,10 +271,10 @@ int build_clay_test_linux(void) {
     "src/clay_test_build.c",
 
     "-lm",
-    "-L./third_party/raylib/build/debug/",
-    "-I./third_party/raylib/",
+    "-L./src/third_party/raylib/build/debug/",
+    "-I./src/third_party/raylib/",
     "-lraylib",
-    "-Wl,-rpath,./third_party/raylib/build/debug/",
+    "-Wl,-rpath,./src/third_party/raylib/build/debug/",
 
     "-o",
     "clay_test"
@@ -263,10 +301,10 @@ int build_clay_test_mac(void) {
     "-O0",
     "src/clay_test_build.c",
 
-    "-L./third_party/raylib/build/debug/",
-    "-I./third_party/raylib/",
+    "-L./src/third_party/raylib/build/debug/",
+    "-I./src/third_party/raylib/",
     "-lraylib",
-    "-Wl,-rpath,./third_party/raylib/build/debug/",
+    "-Wl,-rpath,./src/third_party/raylib/build/debug/",
 
     "-o",
     "clay_test"
@@ -281,7 +319,9 @@ int build_clay_test_mac(void) {
 
 #define build_scheduler build_scheduler_linux
 #define build_raylib build_raylib_linux
+#define build_imgui build_imgui_linux
 #define build_clay_test build_clay_test_linux
+#define build_imgui_test build_imgui_test_linux
 
 #elif PLATFORM_WINDOWS
 
@@ -318,6 +358,13 @@ int main(int argc, char **argv) {
 
   if(!strcmp("clay_test", argv[1])) {
     if(!build_clay_test()) return 1;
+  }
+
+  if(!strcmp("imgui_test", argv[1])) {
+    if(!build_imgui_test()) return 1;
+  }
+  if(!strcmp("imgui", argv[1])) {
+    if(!build_imgui()) return 1;
   }
 
   if(!strcmp("raylib", argv[1])) {

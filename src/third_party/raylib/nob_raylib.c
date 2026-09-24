@@ -6,7 +6,7 @@
 
 #endif
 
-#define RAYLIB_PATH "./third_party/raylib"
+#define RAYLIB_PATH "./src/third_party/raylib"
 
 enum {
   RAYLIB_BUILD_FIRST = 0,
