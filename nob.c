@@ -15,6 +15,7 @@
 #  error This compiler/OS combo is not supported.
 # endif
 
+
 int build_scheduler_win32(void) {
   nob_log(NOB_INFO, "windows build");
 
@@ -82,7 +83,7 @@ int build_scheduler_win32(void) {
     "/nologo",
     "/Fe:scheduler.exe",
     "scheduler.obj",
-    "base_build.obj",
+    "base.obj",
     "user32.lib",
     "dxguid.lib",
     "winmm.lib",
@@ -253,6 +254,42 @@ int build_imgui_test_linux(void) {
   return 1;
 }
 
+int build_imgui_test_win32(void) {
+
+  Nob_Cmd cmd = {0};
+
+  nob_cmd_append(&cmd,
+    "cl.exe",
+    "/W4",
+    "/wd4100",
+    "/wd4101",
+    "/wd4018",
+    "/wd4127",
+    "/Zi",
+    "/Od",
+
+    "src/imgui_test_build.cpp",
+
+    "/I./src/third_party/raylib/",
+    "/I./src/third_party/imgui-1.92.7/",
+
+    "/link",
+
+    "/LIBPATH:./src/third_party/raylib/build/debug/",
+    "raylib.lib",
+
+    "/LIBPATH:./src/third_party/imgui-1.92.7/",
+    "imgui.lib",
+
+    "/OUT:imgui_test.exe"
+  );
+
+  if(!nob_cmd_run_sync_and_reset(&cmd)) return 0;
+
+  return 1;
+}
+
+
 int build_clay_test_linux(void) {
 
   Nob_Cmd cmd = {0};
@@ -327,12 +364,16 @@ int build_clay_test_mac(void) {
 
 #define build_scheduler build_scheduler_win32
 #define build_raylib build_raylib_win32
-#define build_clay_test build_clay_test_win32
+#define build_imgui build_imgui_win32
+#define build_imgui_test build_imgui_test_win32
+
+// #define build_clay_test build_clay_test_win32
 
 #elif PLATFORM_MAC
 
 #define build_scheduler build_scheduler_mac
 #define build_raylib build_raylib_mac
+#define build_imgui build_imgui_mac
 #define build_clay_test build_clay_test_mac
 
 #endif
@@ -356,13 +397,16 @@ int main(int argc, char **argv) {
     if(!build_scheduler()) return 1;
   }
 
+  #if !PLATFORM_WINDOWS
   if(!strcmp("clay_test", argv[1])) {
     if(!build_clay_test()) return 1;
   }
+  #endif
 
   if(!strcmp("imgui_test", argv[1])) {
     if(!build_imgui_test()) return 1;
   }
+
   if(!strcmp("imgui", argv[1])) {
     if(!build_imgui()) return 1;
   }

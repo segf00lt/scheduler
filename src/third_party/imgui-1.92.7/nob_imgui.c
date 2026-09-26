@@ -43,3 +43,68 @@ int build_imgui_linux(void) {
 
   return 1;
 }
+
+int build_imgui_win32(void) {
+  Nob_Cmd cmd = {0};
+
+  nob_cmd_append(&cmd,
+    "cl.exe",
+    "/std:c++11",
+    "/W4",
+    "/wd4100", // unreferenced formal parameter
+    "/wd4101", // unreferenced local variable
+    "/wd4018", // signed/unsigned mismatch
+    "/wd4127", // conditional expression is constant
+    "/Zi",
+    "/Od",
+    IMGUI_PATH"/imgui_build.cpp",
+    "/I"IMGUI_PATH,
+    "/c",
+    "/Fo"IMGUI_PATH"/imgui.obj"
+  );
+  if(!nob_cmd_run_sync_and_reset(&cmd)) return 0;
+
+  nob_cmd_append(&cmd,
+    "lib.exe",
+    "/OUT:"IMGUI_PATH"/imgui.lib",
+    IMGUI_PATH"/imgui.obj"
+  );
+  if(!nob_cmd_run_sync_and_reset(&cmd)) return 0;
+
+  return 1;
+}
+
+int build_imgui_mac(void) {
+  Nob_Cmd cmd = {0};
+
+  nob_cmd_append(&cmd,
+    "clang++",
+    "-std=c++11",
+    "-Wall",
+    "-Wextra",
+    "-Wno-unused-variable",
+    "-Wno-unused-parameter",
+    "-Wno-sign-compare",
+    "-Wno-missing-braces",
+    "-Wno-missing-field-initializers",
+    "-g",
+    "-O0",
+    IMGUI_PATH"/imgui_build.cpp",
+    "-lm",
+    "-I"IMGUI_PATH,
+    "-c",
+    "-o",
+    IMGUI_PATH"/imgui.o"
+  );
+  if(!nob_cmd_run_sync_and_reset(&cmd)) return 0;
+
+  nob_cmd_append(&cmd,
+    "ar",
+    "rcs",
+    IMGUI_PATH"/libimgui.a",
+    IMGUI_PATH"/imgui.o"
+  );
+  if(!nob_cmd_run_sync_and_reset(&cmd)) return 0;
+
+  return 1;
+}
