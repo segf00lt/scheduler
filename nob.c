@@ -261,6 +261,43 @@ int build_imgui_test_linux(void) {
   return 1;
 }
 
+int build_imgui_test_mac(void) {
+
+  Nob_Cmd cmd = {0};
+
+  nob_cmd_append(&cmd,
+    "clang++",
+    "-std=c++11",
+    "-Wall",
+    "-Wextra",
+    "-Wno-unused-variable",
+    "-Wno-unused-parameter",
+    "-Wno-sign-compare",
+    "-Wno-missing-braces",
+    "-Wno-missing-field-initializers",
+    "-g",
+    "-O0",
+    "src/imgui_test_build.cpp",
+
+    "-I./src/third_party/raylib/",
+    "-I./src/third_party/imgui-1.92.7/",
+
+    "-lm",
+    "-L./src/third_party/raylib/build/debug/",
+    "-lraylib",
+    "-Wl,-rpath,./src/third_party/raylib/build/debug/",
+
+    "-L./src/third_party/imgui-1.92.7/",
+    "-limgui",
+
+    "-o",
+    "imgui_test"
+  );
+  if(!nob_cmd_run_sync_and_reset(&cmd)) return 0;
+
+  return 1;
+}
+
 int build_clay_test_linux(void) {
 
   Nob_Cmd cmd = {0};
@@ -342,6 +379,8 @@ int build_clay_test_mac(void) {
 #define build_scheduler build_scheduler_mac
 #define build_raylib build_raylib_mac
 #define build_clay_test build_clay_test_mac
+#define build_imgui build_imgui_mac
+#define build_imgui_test build_imgui_test_mac
 
 #endif
 
