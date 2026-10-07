@@ -112,10 +112,11 @@ int build_scheduler_linux(void) {
     "-Wno-write-strings",
     "-Wno-missing-field-initializers",
     "-Wno-unused-parameter",
-    "-fpermissive",
+    // "-fpermissive",
     "-g",
     "-O0",
     "-c",
+    "-I./src/third_party/raylib/",
     "src/scheduler_build.cpp",
     "-o",
     "scheduler.o"
@@ -145,8 +146,15 @@ int build_scheduler_linux(void) {
     "g++",
     "-g",
     "-O0",
+    // "-Wl,--eh-frame-hdr",
     "scheduler.o",
     "base.o",
+
+    "-lm",
+    "-L./src/third_party/raylib/build/debug/",
+    "-lraylib",
+    "-Wl,-rpath,./src/third_party/raylib/build/debug/",
+
     "-o",
     "scheduler"
   );
