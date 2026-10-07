@@ -172,6 +172,8 @@ int build_scheduler_mac(void) {
 
   nob_cmd_append(&cmd,
     "clang++",
+    "-arch",
+    "arm64",
     "-std=c++11",
     "-Wall",
     "-Wextra",
@@ -180,9 +182,12 @@ int build_scheduler_mac(void) {
     "-Wno-write-strings",
     "-Wno-missing-field-initializers",
     "-Wno-unused-parameter",
+    "-Wno-format",
     "-fpermissive",
     "-g",
     "-O0",
+
+
     "-c",
     "src/scheduler_build.cpp",
     "-o",
@@ -192,6 +197,8 @@ int build_scheduler_mac(void) {
 
   nob_cmd_append(&cmd,
     "clang",
+    "-arch",
+    "arm64",
     "-std=c11",
     "-Wall",
     "-Wextra",
@@ -211,9 +218,18 @@ int build_scheduler_mac(void) {
 
   nob_cmd_append(&cmd,
     "clang++",
+    "-arch",
+    "arm64",
     "-v",
     "-g",
     "-O0",
+
+    "-lm",
+    "-L./src/third_party/raylib/build/debug/",
+    "-lraylib",
+    "-Wl,-rpath,./src/third_party/raylib/build/debug/",
+
+
     "scheduler.o",
     "base.o",
     "-o",
@@ -267,6 +283,8 @@ int build_imgui_test_mac(void) {
 
   nob_cmd_append(&cmd,
     "clang++",
+    "-arch",
+    "arm64",
     "-std=c++11",
     "-Wall",
     "-Wextra",
@@ -335,6 +353,8 @@ int build_clay_test_mac(void) {
 
   nob_cmd_append(&cmd,
     "clang",
+    "-arch",
+    "arm64",
     "-std=c11",
     "-Wall",
     "-Wextra",
