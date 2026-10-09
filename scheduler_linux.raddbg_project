@@ -1,0 +1,17 @@
+// raddbg 0.9.29 project file
+
+target:
+{
+  executable: scheduler
+  enabled: 1
+  entry_point: main
+  stdin_path: "/home/joao/fun/scheduler/test.stdin"
+  arguments: "fifo tests/factorial.asm"
+  working_directory: "../scheduler"
+}
+type_view:
+{
+  type: Str8
+  expr: "no_addr(array(s, len))"
+}
+name: scheduler

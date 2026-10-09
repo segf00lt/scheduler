@@ -140,8 +140,8 @@ char *raylib_ldflags_linux[] = {
 };
 
 char *raylib_include_flags[] = {
-  "-I./third_party/raylib",
-  "-I./third_party/raylib/external/glfw/include",
+  "-I"RAYLIB_PATH,
+  "-I"RAYLIB_PATH"/external/glfw/include",
 };
 
 
@@ -476,7 +476,7 @@ int build_raylib_win32(void) {
       "/nologo",
       "/c",
       "/O2",
-      "/MD",
+      "/MT",
       "/DPLATFORM_DESKTOP_GLFW",
       "/DGRAPHICS_API_OPENGL_33",
       "/Isrc\\third_party\\raylib\\",

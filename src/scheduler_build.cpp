@@ -9,6 +9,8 @@
 #include "app/scheduler.hpp"
 #include "app/assembler.hpp"
 
+#include "third_party/raylib/raylib.h"
+
 #include "app/scheduler.cpp"
 
 #include "app/assembler.cpp"

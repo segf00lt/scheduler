@@ -1,21 +1,25 @@
 #ifndef SCHEDULER_H
 #define SCHEDULER_H
 
+#define MAX_REGISTERS 64
+#define MAX_MEMORY KB(1)
+
 #define OPCODES \
-X(GOTO) \
-X(IFGOTO) \
-X(ADD) \
-X(SUB) \
-X(MUL) \
-X(DIV) \
-X(LT) \
-X(GTE) \
-X(LOAD) \
-X(STORE) \
-X(REGMOV) \
-X(REGSETIMM) \
-X(PRINT) \
-X(INPUT) \
+/* opcode    quantum_cost      */ \
+X( GOTO,                1) \
+X( IFGOTO,              4) \
+X( ADD,                 1) \
+X( SUB,                 1) \
+X( MUL,                 2) \
+X( DIV,                 3) \
+X( LT,                  1) \
+X( GTE,                 1) \
+X( LOAD,                5) \
+X( STORE,               5) \
+X( REGMOV,              2) \
+X( REGSETIMM,           2) \
+X( PRINT,               8) \
+X( INPUT,               8) \
 
 
 #define OPFLAGS \
@@ -36,17 +40,26 @@ OPFLAGS
 
 enum Opcode {
   OP_NONE = 0,
-  #define X(x) OP_##x,
+  #define X(x, cost) OP_##x,
   OPCODES
   #undef X
 };
 
 global read_only char *opcode_strings[] = {
 "NONE",
-#define X(x) #x,
+#define X(x, cost) #x,
 OPCODES
 #undef X
 };
+
+
+global read_only s32 opcode_quantum_cost[] = {
+  0,
+  #define X(x, cost) cost,
+  OPCODES
+  #undef X
+};
+
 
 enum Scheduler_mode {
   SCHED_MODE_FIFO = 0,
@@ -85,14 +98,16 @@ struct Process_state {
   Process_state *next;
   Process_state *prev;
 
-  u32 quantum_used;
+  s32 quantum_deadline; // this is used for EDF, it means the maximum quantum that may be used
+  s32 total_quantum_used;
+  s32 quantum_used_this_run;
   f32 avg_quantum_used;
 
   Inst *instructions;
   u32 pc;
   u32 max_pc_value;
-  u64 registers[64];
-  u8  memory[KB(1)];
+  u64 registers[MAX_REGISTERS];
+  u8  memory[MAX_MEMORY];
 };
 
 struct Process_queue {
@@ -102,36 +117,25 @@ struct Process_queue {
 };
 
 
-// C++ is really complicated
-class Scheduling_algorithm {
-public:
-  bool ignore_quantum;
-  char *name;
-
-  Scheduling_algorithm(char *name, bool ignore_quantum = false) {
-    this->name = name;
-    this->ignore_quantum = ignore_quantum;
-  }
-
-  virtual int compare(const void *a, const void *b);
-
-};
-
-
-
 internal void push_process_to_queue(Process_queue *process_queue, Process_state *process_state);
 
 internal Process_state* remove_process_from_queue_return_next(Process_queue *process_queue, Process_state *process_state);
 
-internal int compare_processes_by_avg_quantum_used(const void *a, const void *b);
+internal int compare_processes_by_remaining_instructions(const void *a, const void *b);
 
 internal int compare_processes_by_priority(const void *a, const void *b);
 
 internal int compare_processes_by_instruction_count(const void *a, const void *b);
 
+internal force_inline bool is_scheduler_mode_preemptive(Scheduler_mode mode);
+
+internal void sort_process_queue(Arena *a, Process_queue *cur_queue);
+
 internal void process_scheduler(Arena *a, Process_queue initial_process_queue);
 
-internal void process_runner(Process_state *process_state, bool ignore_quantum);
+internal void render_gantt(void);
+
+internal s32 process_run_step(Process_state *process_state, bool ignore_quantum);
 
 internal Program load_program(char *code_path, Arena *a);
 

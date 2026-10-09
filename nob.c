@@ -42,7 +42,7 @@ int build_scheduler_win32(void) {
     "/wd4267",
     "/Zi",
     "/Od",
-    "/MDd",
+    "/MT",
     "/c",
     "/Fo:scheduler.obj",
     "/FS",
@@ -66,7 +66,7 @@ int build_scheduler_win32(void) {
     "/wd4267",
     "/Zi",
     "/Od",
-    "/MDd",
+    "/MT",
     "/c",
     "src/base_build.c",
     "/Fo:base.obj",
@@ -88,7 +88,16 @@ int build_scheduler_win32(void) {
     "dxguid.lib",
     "winmm.lib",
     "ole32.lib",
+
+    "src/third_party/raylib/build/static/raylib.lib",
+    "gdi32.lib",
+    "winmm.lib",
+    "user32.lib",
+    "shell32.lib",
+    "opengl32.lib",
+
     "/link",
+
     "/DEBUG",
     "/INCREMENTAL:NO",
     ""
@@ -113,10 +122,11 @@ int build_scheduler_linux(void) {
     "-Wno-write-strings",
     "-Wno-missing-field-initializers",
     "-Wno-unused-parameter",
-    "-fpermissive",
+    // "-fpermissive",
     "-g",
     "-O0",
     "-c",
+    "-I./src/third_party/raylib/",
     "src/scheduler_build.cpp",
     "-o",
     "scheduler.o"
@@ -146,8 +156,15 @@ int build_scheduler_linux(void) {
     "g++",
     "-g",
     "-O0",
+    // "-Wl,--eh-frame-hdr",
     "scheduler.o",
     "base.o",
+
+    "-lm",
+    "-L./src/third_party/raylib/build/debug/",
+    "-lraylib",
+    "-Wl,-rpath,./src/third_party/raylib/build/debug/",
+
     "-o",
     "scheduler"
   );
@@ -165,6 +182,8 @@ int build_scheduler_mac(void) {
 
   nob_cmd_append(&cmd,
     "clang++",
+    "-arch",
+    "arm64",
     "-std=c++11",
     "-Wall",
     "-Wextra",
@@ -173,9 +192,12 @@ int build_scheduler_mac(void) {
     "-Wno-write-strings",
     "-Wno-missing-field-initializers",
     "-Wno-unused-parameter",
+    "-Wno-format",
     "-fpermissive",
     "-g",
     "-O0",
+
+
     "-c",
     "src/scheduler_build.cpp",
     "-o",
@@ -185,6 +207,8 @@ int build_scheduler_mac(void) {
 
   nob_cmd_append(&cmd,
     "clang",
+    "-arch",
+    "arm64",
     "-std=c11",
     "-Wall",
     "-Wextra",
@@ -204,9 +228,18 @@ int build_scheduler_mac(void) {
 
   nob_cmd_append(&cmd,
     "clang++",
+    "-arch",
+    "arm64",
     "-v",
     "-g",
     "-O0",
+
+    "-lm",
+    "-L./src/third_party/raylib/build/debug/",
+    "-lraylib",
+    "-Wl,-rpath,./src/third_party/raylib/build/debug/",
+
+
     "scheduler.o",
     "base.o",
     "-o",
@@ -255,7 +288,6 @@ int build_imgui_test_linux(void) {
 }
 
 int build_imgui_test_win32(void) {
-
   Nob_Cmd cmd = {0};
 
   nob_cmd_append(&cmd,
@@ -267,20 +299,23 @@ int build_imgui_test_win32(void) {
     "/wd4127",
     "/Zi",
     "/Od",
-
+    "/MT",
     "src/imgui_test_build.cpp",
+    "src/third_party/raylib/build/static/raylib.lib",
+    "src/third_party/imgui-1.92.7/build/static/imgui.lib",
+
+    "gdi32.lib",
+    "winmm.lib",
+    "user32.lib",
+    "shell32.lib",
+    "opengl32.lib",
+
 
     "/I./src/third_party/raylib/",
     "/I./src/third_party/imgui-1.92.7/",
 
+
     "/link",
-
-    "/LIBPATH:./src/third_party/raylib/build/debug/",
-    "raylib.lib",
-
-    "/LIBPATH:./src/third_party/imgui-1.92.7/",
-    "imgui.lib",
-
     "/OUT:imgui_test.exe"
   );
 
@@ -289,6 +324,44 @@ int build_imgui_test_win32(void) {
   return 1;
 }
 
+int build_imgui_test_mac(void) {
+  Nob_Cmd cmd = {0};
+
+  nob_cmd_append(&cmd,
+    "clang++",
+    "-arch",
+    "arm64",
+    "-std=c++11",
+    "-Wall",
+    "-Wextra",
+    "-Wno-unused-variable",
+    "-Wno-unused-parameter",
+    "-Wno-sign-compare",
+    "-Wno-missing-braces",
+    "-Wno-missing-field-initializers",
+    "-g",
+    "-O0",
+    "src/imgui_test_build.cpp",
+
+    "-I./src/third_party/raylib/",
+    "-I./src/third_party/imgui-1.92.7/",
+
+    "-lm",
+    "-L./src/third_party/raylib/build/debug/",
+    "-lraylib",
+    "-Wl,-rpath,./src/third_party/raylib/build/debug/",
+
+    "-L./src/third_party/imgui-1.92.7/",
+    "-limgui",
+
+    "-o",
+    "imgui_test"
+  );
+
+  if(!nob_cmd_run_sync_and_reset(&cmd)) return 0;
+
+  return 1;
+}
 
 int build_clay_test_linux(void) {
 
@@ -327,6 +400,8 @@ int build_clay_test_mac(void) {
 
   nob_cmd_append(&cmd,
     "clang",
+    "-arch",
+    "arm64",
     "-std=c11",
     "-Wall",
     "-Wextra",
@@ -375,6 +450,8 @@ int build_clay_test_mac(void) {
 #define build_raylib build_raylib_mac
 #define build_imgui build_imgui_mac
 #define build_clay_test build_clay_test_mac
+#define build_imgui build_imgui_mac
+#define build_imgui_test build_imgui_test_mac
 
 #endif
 
