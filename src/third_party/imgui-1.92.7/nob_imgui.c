@@ -177,15 +177,15 @@ int build_imgui_mac(void) {
       "-I"IMGUI_PATH,
       "-c",
       "-o",
-      IMGUI_PATH"/imgui.o"
+      IMGUI_STATIC_BUILD_DIR"/imgui.o"
     );
     if(!nob_cmd_run_sync_and_reset(&cmd)) return 0;
 
     nob_cmd_append(&cmd,
       "ar",
       "rcs",
-      IMGUI_PATH"/libimgui.a",
-      IMGUI_PATH"/imgui.o"
+      IMGUI_STATIC_BUILD_DIR"/libimgui.a",
+      IMGUI_STATIC_BUILD_DIR"/imgui.o"
     );
     if(!nob_cmd_run_sync_and_reset(&cmd)) return 0;
   }

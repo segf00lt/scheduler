@@ -276,7 +276,7 @@ int build_imgui_test_linux(void) {
     "-lraylib",
     "-Wl,-rpath,./src/third_party/raylib/build/debug/",
 
-    "-L./src/third_party/imgui-1.92.7/",
+    "-L./src/third_party/imgui-1.92.7/build/static/",
     "-limgui",
 
     "-o",
@@ -351,7 +351,7 @@ int build_imgui_test_mac(void) {
     "-lraylib",
     "-Wl,-rpath,./src/third_party/raylib/build/debug/",
 
-    "-L./src/third_party/imgui-1.92.7/",
+    "-L./src/third_party/imgui-1.92.7/build/static/",
     "-limgui",
 
     "-o",
