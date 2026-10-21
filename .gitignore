@@ -55,3 +55,4 @@ scheduler
 clay_test
 imgui.ini
 imgui_test
+*.DS_Store*
