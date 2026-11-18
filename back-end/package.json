@@ -1,0 +1,14 @@
+{
+  "name": "escalonador-back-end",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "API didática de escalonamento de CPU: valida os dados e simula os algoritmos.",
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

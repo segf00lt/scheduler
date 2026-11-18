@@ -3,5 +3,11 @@
     "@types/node": "^26.6.5",
     "tsx": "^4.23.15",
     "typescript": "^7.0.2"
+  },
+  "scripts": {
+    "web:install": "cd front-end && npm install",
+    "backend": "cd back-end && npm start",
+    "frontend": "cd front-end && npm run dev",
+    "backend:test": "cd back-end && npm test"
   }
 }
