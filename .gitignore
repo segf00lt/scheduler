@@ -55,3 +55,5 @@ scheduler
 clay_test
 imgui.ini
 imgui_test
+test.stdin
+scheduler_rdi.dump
