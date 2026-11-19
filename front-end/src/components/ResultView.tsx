@@ -1,135 +1,98 @@
-import type { SimulationResult } from '../types';
-import { LOG_LABELS, PROCESS_COLORS } from '../constants';
-import { GanttChart } from './GanttChart';
+import { useState } from 'react';
+import type { RunResult } from '../types';
+import { ConsoleView } from './ConsoleView';
+import { SummaryView } from './SummaryView';
+import { TimelineView } from './TimelineView';
 
 interface Props {
-  result: SimulationResult;
-  algorithmName: string;
-  algorithmRule: string;
+  result: RunResult | null;
+  runError: string | null;
+  busy: boolean;
+  processCount: number;
 }
 
-const fmt = (value: number) => value.toLocaleString('pt-BR', { maximumFractionDigits: 2 });
+type Tab = 'timeline' | 'console' | 'summary';
 
-export function ResultView({ result, algorithmName }: Props) {
-  const { metrics, processStats, logs, processes, preemptive, overload } = result;
-  const colorOf = (name: string | null) => {
-    const index = processes.find((p) => p.name === name)?.index;
-    return index === undefined ? '#8A8F98' : PROCESS_COLORS[index]?.hex ?? '#8A8F98';
-  };
+const TABS: { id: Tab; label: string }[] = [
+  { id: 'timeline', label: 'Timeline' },
+  { id: 'console', label: 'Console' },
+  { id: 'summary', label: 'Resumo' },
+];
 
-  // Indicadores principais: os mesmos nomes e a mesma ordem do exemplo.
-  const indicators = [
-    { label: 'Espera média', value: fmt(metrics.averageWaitingTime), help: 'Tempo pronto sem usar a CPU.' },
-    { label: 'Turnaround médio', value: fmt(metrics.averageTurnaroundTime), help: 'Da chegada até o término.' },
-    { label: 'Resposta média', value: fmt(metrics.averageResponseTime), help: 'Da chegada até a 1ª vez na CPU.' },
-    { label: 'CPU ociosa', value: `${fmt(metrics.idlePercentage)}%`, help: 'Parte do tempo sem ninguém na CPU.' },
-  ];
+const STATUS_TEXT: Record<Exclude<RunResult['status'], 'ok'>, string> = {
+  error: 'O back-end recusou o programa',
+  missing_input: 'Entrada faltando',
+  timeout: 'Tempo esgotado',
+  invalid: 'Pedido inválido',
+};
 
-  // Indicadores de interrupção: só fazem sentido em algoritmos preemptivos.
-  const preemptionIndicators = [
-    { label: 'Preempções', value: String(metrics.preemptions), help: 'Vezes em que um processo foi tirado da CPU antes de terminar.' },
-    { label: 'Trocas de contexto', value: String(metrics.contextSwitches), help: 'Trocas em que a CPU gastou tempo para mudar de processo.' },
-    {
-      label: 'Tempo gasto em trocas',
-      value: `${metrics.overloadUnits} un.`,
-      help: `${overload} unidade(s) por troca, sem processo executando.`,
-    },
-  ];
+export function ResultView({ result, runError, busy, processCount }: Props) {
+  const [tab, setTab] = useState<Tab>('timeline');
 
   return (
-    <section className="card" aria-labelledby="result-title">
-      <h2 id="result-title" className="section-title">
-        3. Resultado
-      </h2>
-      <p className="result-summary">
-        <strong>{algorithmName}</strong> · tempo total de {result.totalTime} unidades.
-      </p>
-
-      <h3 className="sub-title">Diagrama de Gantt</h3>
-      <GanttChart result={result} />
-
-      <h3 className="sub-title">Indicadores</h3>
-      <ul className="indicator-grid">
-        {indicators.map((item) => (
-          <li key={item.label} className="indicator">
-            <span className="indicator-value">{item.value}</span>
-            <span className="indicator-label">{item.label}</span>
-            <span className="indicator-help">{item.help}</span>
-          </li>
-        ))}
-      </ul>
-
-      {preemptive ? (
-        <>
-          <h3 className="sub-title">Interrupções</h3>
-          <ul className="indicator-grid">
-            {preemptionIndicators.map((item) => (
-              <li key={item.label} className="indicator indicator-accent">
-                <span className="indicator-value">{item.value}</span>
-                <span className="indicator-label">{item.label}</span>
-                <span className="indicator-help">{item.help}</span>
-              </li>
-            ))}
-          </ul>
-        </>
-      ) : (
-        <p className="hint">Este algoritmo não interrompe processos: não há preempções nem trocas de contexto.</p>
-      )}
-
-      <h3 className="sub-title">Por processo</h3>
-      <div className="table-scroll">
-        <table className="stats-table">
-          <thead>
-            <tr>
-              <th scope="col">Processo</th>
-              <th scope="col">Chegada</th>
-              <th scope="col">Duração</th>
-              <th scope="col">1ª vez na CPU</th>
-              <th scope="col">Término</th>
-              <th scope="col">Espera</th>
-              <th scope="col">Turnaround</th>
-              <th scope="col">Resposta</th>
-              <th scope="col">Preempções</th>
-            </tr>
-          </thead>
-          <tbody>
-            {processStats.map((stat) => (
-              <tr key={stat.name}>
-                <th scope="row">
-                  <span className="color-dot small" style={{ background: colorOf(stat.name) }} aria-hidden="true" />
-                  {stat.name}
-                </th>
-                <td>{stat.arrival}</td>
-                <td>{stat.burst}</td>
-                <td>{stat.firstStart}</td>
-                <td>{stat.finish}</td>
-                <td>{stat.waitingTime}</td>
-                <td>{stat.turnaroundTime}</td>
-                <td>{stat.responseTime}</td>
-                <td>{stat.preemptions}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+    <div className="result">
+      <div className="result-head">
+        <div className="tabs" role="tablist" aria-label="Visões do resultado">
+          {TABS.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              role="tab"
+              aria-selected={tab === item.id}
+              className={`tab ${tab === item.id ? 'is-on' : ''}`}
+              onClick={() => setTab(item.id)}
+            >
+              {item.label}
+              {item.id === 'timeline' && result && <span className="tab-count">{result.events.length}</span>}
+            </button>
+          ))}
+        </div>
+        {result && (
+          <div className="badges">
+            <span className="badge">{result.events.length} eventos</span>
+            <span className="badge">{processCount} processos</span>
+          </div>
+        )}
       </div>
 
-      <h3 className="sub-title">Registro de eventos</h3>
-      <ol className="log-list">
-        {logs.map((log, index) => (
-          <li key={index} className="log-item">
-            <span className="log-time">{log.time}</span>
-            <span
-              className="color-dot small"
-              style={{ background: log.process ? colorOf(log.process) : '#8A8F98' }}
-              aria-hidden="true"
-            />
-            <span className="log-text">
-              <span className={`log-tag tag-${log.type}`}>{LOG_LABELS[log.type]}</span>
-              {log.message}
-            </span>
-          </li>
-        ))}
-      </ol>
-    </section>
+      {runError && (
+        <div className="banner is-error" role="alert">
+          <strong>Não foi possível simular.</strong> {runError}
+        </div>
+      )}
+
+      {result && result.status !== 'ok' && (
+        <div className={`banner ${result.status === 'error' ? 'is-error' : 'is-warn'}`} role="alert">
+          <strong>{STATUS_TEXT[result.status]}.</strong> {result.message}
+        </div>
+      )}
+
+      {result && result.status === 'ok' && (
+        <div className="banner is-ok" role="status">
+          Simulação concluída. Veja a ordem dos eventos na Timeline.
+        </div>
+      )}
+
+      {!result && !runError && (
+        <section className="empty-state" aria-labelledby="empty-title">
+          <h2 id="empty-title" className="section-title">
+            Resultado
+          </h2>
+          <p className="hint">
+            Escolha o modo, o código assembly de cada processo e as entradas. Depois clique em Simular: o programa é
+            executado pelo back-end real (<code>src/scheduler.ts</code>) e o resultado aparece aqui.
+          </p>
+          {busy && <p className="hint">Executando…</p>}
+        </section>
+      )}
+
+      {result && (
+        <div className="result-body" role="tabpanel">
+          {tab === 'timeline' && <TimelineView result={result} />}
+          {tab === 'console' && <ConsoleView result={result} />}
+          {tab === 'summary' && <SummaryView result={result} />}
+        </div>
+      )}
+    </div>
   );
 }

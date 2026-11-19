@@ -1,236 +1,159 @@
-import type { Algorithm, AlgorithmId, ApiError, ProcessRow } from '../types';
+import type { ProgramInfo } from '../types';
 import { MAX_PROCESSES, PROCESS_COLORS } from '../constants';
 
-interface Props {
-  algorithms: Algorithm[];
-  algorithmId: AlgorithmId;
-  quantum: number;
-  processes: ProcessRow[];
-  errors: ApiError[];
-  busy: boolean;
-  onAlgorithmChange: (id: AlgorithmId) => void;
-  onQuantumChange: (value: number) => void;
-  overloadEnabled: boolean;
-  overloadTime: number;
-  onOverloadEnabledChange: (value: boolean) => void;
-  onOverloadTimeChange: (value: number) => void;
-  onProcessesChange: (rows: ProcessRow[]) => void;
-  onRun: () => void;
+export interface ProcessDraft {
+  // Exemplo de onde veio o código (id de tests/*.asm), ou null se o usuário editou/escreveu.
+  example: string | null;
+  source: string;
 }
 
-type Field = 'name' | 'arrival' | 'burst' | 'priority';
+interface Props {
+  programs: ProgramInfo[];
+  processes: ProcessDraft[];
+  activeIndex: number;
+  onActiveChange: (index: number) => void;
+  onProcessesChange: (rows: ProcessDraft[]) => void;
+  inputsText: string;
+  onInputsChange: (value: string) => void;
+  modeNote: string;
+}
 
-const FIELD_LABELS: Record<Exclude<Field, 'name'>, string> = {
-  arrival: 'Chegada',
-  burst: 'Duração',
-  priority: 'Prioridade',
-};
-
-const NAME_OPTIONS = ['P1', 'P2', 'P3', 'P4', 'P5', 'P6'];
+const NEW_PROCESS_SOURCE = 'set r0, 1\nprint r0\nset r1, 2\n';
 
 export function ProcessEditor(props: Props) {
-  const { algorithms, algorithmId, quantum, processes, errors, busy } = props;
-  const selected = algorithms.find((a) => a.id === algorithmId);
+  const { programs, processes, activeIndex, onProcessesChange } = props;
+  const active = processes[activeIndex] ?? processes[0];
+  const activeColor = PROCESS_COLORS[activeIndex] ?? PROCESS_COLORS[0];
 
-  const errorFor = (row: number | null, field: string) =>
-    errors.find((e) => e.row === row && e.field === field)?.message;
+  const updateActive = (patch: Partial<ProcessDraft>) =>
+    onProcessesChange(processes.map((row, i) => (i === activeIndex ? { ...row, ...patch } : row)));
 
-  const updateRow = (index: number, patch: Partial<ProcessRow>) =>
-    props.onProcessesChange(processes.map((row, i) => (i === index ? { ...row, ...patch } : row)));
-
-  const addRow = () => {
+  const addProcess = () => {
     if (processes.length >= MAX_PROCESSES) return;
-    const used = new Set(processes.map((p) => p.name));
-    const name = NAME_OPTIONS.find((n) => !used.has(n)) ?? `P${processes.length + 1}`;
-    props.onProcessesChange([...processes, { name, arrival: 0, burst: 3, priority: 1 }]);
+    onProcessesChange([...processes, { example: null, source: NEW_PROCESS_SOURCE }]);
+    props.onActiveChange(processes.length);
   };
 
-  const removeRow = (index: number) => props.onProcessesChange(processes.filter((_, i) => i !== index));
-
-  const numberField = (index: number, field: Exclude<Field, 'name'>) => {
-    const id = `p${index}-${field}`;
-    const message = errorFor(index, field);
-    const value = processes[index]?.[field] ?? 0;
-    return (
-      <div className="mini-field">
-        <label htmlFor={id}>{FIELD_LABELS[field]}</label>
-        <input
-          id={id}
-          type="number"
-          inputMode="numeric"
-          min={field === 'burst' ? 1 : 0}
-          step={1}
-          value={Number.isNaN(value) ? '' : value}
-          aria-invalid={message ? true : undefined}
-          aria-describedby={message ? `${id}-error` : undefined}
-          onChange={(e) => updateRow(index, { [field]: e.target.valueAsNumber } as Partial<ProcessRow>)}
-        />
-        {message && (
-          <span className="field-error" id={`${id}-error`}>
-            {message}
-          </span>
-        )}
-      </div>
-    );
+  const removeProcess = (index: number) => {
+    if (processes.length <= 1) return;
+    const next = processes.filter((_, i) => i !== index);
+    onProcessesChange(next);
+    props.onActiveChange(Math.max(0, Math.min(activeIndex, next.length - 1)));
   };
+
+  const pickExample = (value: string) => {
+    if (value === 'custom') {
+      updateActive({ example: null });
+      return;
+    }
+    const program = programs.find((p) => p.id === value);
+    if (program) updateActive({ example: program.id, source: program.source });
+  };
+
+  const selectedExample = active?.example ?? 'custom';
 
   return (
-    <section className="card" aria-labelledby="algorithm-title">
-      <h2 id="algorithm-title" className="section-title">
-        1. Algoritmo
-      </h2>
+    <div className="editor">
+      <div className="section-head">
+        <h2 className="section-title">Processos</h2>
+        <button type="button" className="ghost-button" onClick={addProcess} disabled={processes.length >= MAX_PROCESSES}>
+          + Adicionar
+        </button>
+      </div>
 
-      <fieldset className="segmented-wrap">
-        <legend className="visually-hidden">Escolha o algoritmo</legend>
-        <div className="segmented" role="radiogroup">
-          {algorithms.map((algorithm) => {
-            const checked = algorithm.id === algorithmId;
-            return (
-              <label key={algorithm.id} className={`segment ${checked ? 'is-on' : ''}`}>
-                <input
-                  type="radio"
-                  name="algorithm"
-                  value={algorithm.id}
-                  checked={checked}
-                  onChange={() => props.onAlgorithmChange(algorithm.id)}
-                />
-                <span>{algorithm.shortName}</span>
-              </label>
-            );
-          })}
-        </div>
-      </fieldset>
-
-      {selected && (
-        <p className="rule" aria-live="polite">
-          {selected.rule}
-        </p>
-      )}
-
-      {selected?.usesQuantum && (
-        <div className="quantum-row">
-          <label htmlFor="quantum">Quantum (fatia de tempo)</label>
-          <input
-            id="quantum"
-            type="number"
-            min={1}
-            step={1}
-            value={Number.isNaN(quantum) ? '' : quantum}
-            aria-invalid={errorFor(null, 'quantum') ? true : undefined}
-            aria-describedby={errorFor(null, 'quantum') ? 'quantum-error' : undefined}
-            onChange={(e) => props.onQuantumChange(e.target.valueAsNumber)}
-          />
-          {errorFor(null, 'quantum') && (
-            <span className="field-error" id="quantum-error">
-              {errorFor(null, 'quantum')}
-            </span>
-          )}
-        </div>
-      )}
-
-      {selected?.preemptive && (
-        <div className="overload-box">
-          <label className="check-row">
-            <input
-              type="checkbox"
-              checked={props.overloadEnabled}
-              onChange={(e) => props.onOverloadEnabledChange(e.target.checked)}
-            />
-            <span>Considerar troca de contexto</span>
-          </label>
-          <p className="hint">
-            Cada interrupção faz a CPU gastar um tempo trocando de processo. Nesse tempo, ninguém executa.
-          </p>
-          {props.overloadEnabled && (
-            <div className="quantum-row">
-              <label htmlFor="overload-time">Tempo gasto a cada troca (unidades)</label>
-              <input
-                id="overload-time"
-                type="number"
-                min={0}
-                max={5}
-                step={1}
-                value={Number.isNaN(props.overloadTime) ? '' : props.overloadTime}
-                aria-invalid={errorFor(null, 'overload') ? true : undefined}
-                aria-describedby={errorFor(null, 'overload') ? 'overload-error' : undefined}
-                onChange={(e) => props.onOverloadTimeChange(e.target.valueAsNumber)}
-              />
-              {errorFor(null, 'overload') && (
-                <span className="field-error" id="overload-error">
-                  {errorFor(null, 'overload')}
-                </span>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
-      <h2 className="section-title section-spaced">2. Processos</h2>
-      <ul className="process-list">
+      <div className="tabs process-tabs" role="tablist" aria-label="Processos">
         {processes.map((row, index) => {
-          const nameError = errorFor(index, 'name');
+          const selected = index === activeIndex;
+          const color = PROCESS_COLORS[index] ?? PROCESS_COLORS[0];
           return (
-            <li key={index} className="process-card">
-              <div className="process-head">
-                <span
-                  className="color-dot"
-                  style={{ background: PROCESS_COLORS[index]?.hex }}
-                  role="img"
-                  aria-label={`Cor do processo ${row.name}: ${PROCESS_COLORS[index]?.name}`}
-                />
-                <label className="visually-hidden" htmlFor={`p${index}-name`}>
-                  Nome do processo {index + 1}
-                </label>
-                <input
-                  id={`p${index}-name`}
-                  className="name-input"
-                  type="text"
-                  maxLength={12}
-                  value={row.name}
-                  aria-invalid={nameError ? true : undefined}
-                  aria-describedby={nameError ? `p${index}-name-error` : undefined}
-                  onChange={(e) => updateRow(index, { name: e.target.value })}
-                />
+            <div key={index} className={`process-tab ${selected ? 'is-on' : ''}`}>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={selected}
+                className="process-tab-main"
+                onClick={() => props.onActiveChange(index)}
+              >
+                <span className="color-dot" style={{ background: color }} aria-hidden="true" />
+                P{index}
+              </button>
+              {processes.length > 1 && (
                 <button
                   type="button"
-                  className="remove-button"
-                  onClick={() => removeRow(index)}
-                  disabled={processes.length <= 1}
-                  aria-label={`Remover ${row.name}`}
+                  className="process-tab-x"
+                  onClick={() => removeProcess(index)}
+                  aria-label={`Remover P${index}`}
                 >
-                  Remover
+                  ×
                 </button>
-              </div>
-              {nameError && (
-                <span className="field-error" id={`p${index}-name-error`}>
-                  {nameError}
-                </span>
               )}
-              <div className="mini-grid">
-                {numberField(index, 'arrival')}
-                {numberField(index, 'burst')}
-                {numberField(index, 'priority')}
-              </div>
-            </li>
+            </div>
           );
         })}
-      </ul>
-      <button
-        type="button"
-        className="add-button"
-        onClick={addRow}
-        disabled={processes.length >= MAX_PROCESSES}
-      >
-        Adicionar processo
-      </button>
-      <p className="hint">
-        Chegada: quando entra na fila. Duração: tempo de CPU necessário.
-        {selected?.usesPriority && ' Prioridade: número menor é mais importante.'}
-      </p>
+      </div>
 
-      <button type="button" className="run-button" onClick={props.onRun} disabled={busy}>
-        {busy ? 'Simulando…' : 'Simular'}
-      </button>
-    </section>
+      <div className="field-row">
+        <label htmlFor="example-select" className="field-label">
+          Código assembly
+        </label>
+        <select
+          id="example-select"
+          className="select"
+          value={selectedExample}
+          onChange={(e) => pickExample(e.target.value)}
+        >
+          {programs.map((program) => (
+            <option key={program.id} value={program.id}>
+              {program.file}
+              {program.hasCode ? '' : ' (sem instruções)'}
+            </option>
+          ))}
+          <option value="custom">Personalizado</option>
+        </select>
+      </div>
+
+      <p className="hint mode-note">{props.modeNote}</p>
+
+      <div className="code-box" style={{ borderColor: activeColor }}>
+        <label htmlFor="asm-source" className="visually-hidden">
+          Código assembly do P{activeIndex}
+        </label>
+        <textarea
+          id="asm-source"
+          className="code-area"
+          spellCheck={false}
+          value={active?.source ?? ''}
+          onChange={(e) => updateActive({ source: e.target.value, example: null })}
+          rows={14}
+        />
+      </div>
+
+      <div className="field-row">
+        <label htmlFor="inputs" className="field-label">
+          Entradas (input)
+        </label>
+        <input
+          id="inputs"
+          type="text"
+          className="text-input"
+          value={props.inputsText}
+          onChange={(e) => props.onInputsChange(e.target.value)}
+          placeholder="ex.: 8, 5"
+          autoComplete="off"
+        />
+        <p className="hint">
+          Valores inteiros separados por vírgula. O back-end usa uma única entrada para todos os processos: cada pedido
+          de <code>input</code> pega o próximo valor, na ordem em que acontecem.
+        </p>
+      </div>
+
+      <details className="notice">
+        <summary>Por que não há prioridade, chegada ou duração?</summary>
+        <p className="hint">
+          O back-end lê só os arquivos assembly. Todos os processos chegam juntos (instante 0), entram com prioridade 0 e
+          a duração é o próprio programa. O quantum você escolhe no topo (padrão 6).
+        </p>
+      </details>
+    </div>
   );
 }

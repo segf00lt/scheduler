@@ -1,50 +1,44 @@
-import type { Algorithm, ApiError, SimulateRequest, SimulationResult } from './types';
+import type { ProgramsResponse, RunRequest, RunResult } from './types';
 
-// Erro de validação devolvido pelo back-end (status 422) ou erro de conexão.
-export class ApiFailure extends Error {
-  readonly errors: ApiError[];
-  readonly offline: boolean;
+const OFFLINE = 'Não foi possível falar com a ponte do back-end. Confira se o `npm run dev` do front-end está rodando.';
 
-  constructor(errors: ApiError[], offline = false) {
-    super(errors[0]?.message ?? 'Erro desconhecido');
-    this.errors = errors;
-    this.offline = offline;
-  }
-}
-
-const OFFLINE_MESSAGE = {
-  field: 'connection',
-  message:
-    'Não foi possível falar com o back-end. Confira se ele está rodando (npm start na pasta back-end).',
-  row: null,
-};
-
-export async function fetchAlgorithms(): Promise<Algorithm[]> {
-  let response: Response;
+async function readJson<T>(response: Response): Promise<T> {
+  const text = await response.text();
   try {
-    response = await fetch('/api/algorithms');
+    return JSON.parse(text) as T;
   } catch {
-    throw new ApiFailure([OFFLINE_MESSAGE], true);
+    throw new Error('A ponte devolveu uma resposta que não é JSON.');
   }
-  const data = (await response.json()) as { algorithms: Algorithm[] };
-  return data.algorithms;
 }
 
-export async function runSimulation(request: SimulateRequest): Promise<SimulationResult> {
+export async function fetchPrograms(): Promise<ProgramsResponse> {
   let response: Response;
   try {
-    response = await fetch('/api/simulate', {
+    response = await fetch('/api/programs');
+  } catch {
+    throw new Error(OFFLINE);
+  }
+  if (!response.ok) throw new Error('Não foi possível carregar os exemplos de assembly.');
+  return readJson<ProgramsResponse>(response);
+}
+
+// Devolve sempre um RunResult (inclusive quando o back-end recusa o programa).
+// Só lança erro para problemas de transporte ou de validação da ponte.
+export async function runScheduler(request: RunRequest): Promise<RunResult> {
+  let response: Response;
+  try {
+    response = await fetch('/api/run', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(request),
     });
   } catch {
-    throw new ApiFailure([OFFLINE_MESSAGE], true);
+    throw new Error(OFFLINE);
   }
-
-  const data = await response.json();
-  if (!response.ok) {
-    throw new ApiFailure((data as { errors: ApiError[] }).errors ?? [OFFLINE_MESSAGE]);
+  const data = await readJson<RunResult & { message?: string }>(response);
+  if (response.status === 422 || response.status === 400) {
+    throw new Error(data.message ?? 'Pedido inválido.');
   }
-  return data as SimulationResult;
+  if (!response.ok) throw new Error('A ponte falhou ao executar o back-end.');
+  return data;
 }

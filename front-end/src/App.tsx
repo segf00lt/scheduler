@@ -1,141 +1,114 @@
 import { useEffect, useState } from 'react';
-import { ApiFailure, fetchAlgorithms, runSimulation } from './api';
-import { ProcessEditor } from './components/ProcessEditor';
+import { fetchPrograms, runScheduler } from './api';
+import { ProcessEditor, type ProcessDraft } from './components/ProcessEditor';
 import { ResultView } from './components/ResultView';
-import { GLOSSARY } from './constants';
-import type { Algorithm, AlgorithmId, ApiError, ProcessRow, SimulationResult } from './types';
+import { TopBar } from './components/TopBar';
+import { DEFAULT_QUANTUM, MODES } from './constants';
+import type { ProgramInfo, RunResult, SchedulerMode } from './types';
 
-const INITIAL_PROCESSES: ProcessRow[] = [
-  { name: 'P1', arrival: 0, burst: 4, priority: 2 },
-  { name: 'P2', arrival: 1, burst: 3, priority: 1 },
-  { name: 'P3', arrival: 2, burst: 1, priority: 3 },
+// Os dois primeiros exemplos vêm carregados. São os mesmos arquivos de tests/ do back-end.
+const INITIAL_PROCESSES: ProcessDraft[] = [
+  { example: 'fibonacci', source: '' },
+  { example: 'test2', source: '' },
 ];
 
+const INITIAL_INPUTS = '8';
+
 export default function App() {
-  const [algorithms, setAlgorithms] = useState<Algorithm[]>([]);
-  const [algorithmId, setAlgorithmId] = useState<AlgorithmId>('fifo');
-  const [quantum, setQuantum] = useState(2);
-  const [overloadEnabled, setOverloadEnabled] = useState(true);
-  const [overloadTime, setOverloadTime] = useState(1);
-  const [processes, setProcesses] = useState<ProcessRow[]>(INITIAL_PROCESSES);
-  const [errors, setErrors] = useState<ApiError[]>([]);
-  const [result, setResult] = useState<SimulationResult | null>(null);
+  const [programs, setPrograms] = useState<ProgramInfo[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [mode, setMode] = useState<SchedulerMode>('round_robin');
+  const [quantum, setQuantum] = useState<number>(DEFAULT_QUANTUM);
+  const [processes, setProcesses] = useState<ProcessDraft[]>(INITIAL_PROCESSES);
+  const [activeProcess, setActiveProcess] = useState(0);
+  const [inputsText, setInputsText] = useState(INITIAL_INPUTS);
+  const [result, setResult] = useState<RunResult | null>(null);
+  const [runError, setRunError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [status, setStatus] = useState('');
+  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
 
   useEffect(() => {
-    fetchAlgorithms()
-      .then(setAlgorithms)
-      .catch((error: unknown) => {
-        if (error instanceof ApiFailure) setErrors(error.errors);
-      });
+    fetchPrograms()
+      .then(({ programs: list }) => {
+        setPrograms(list);
+        // Preenche o código dos processos iniciais a partir dos exemplos carregados.
+        setProcesses((current) =>
+          current.map((draft) => {
+            const example = list.find((program) => program.id === draft.example);
+            return example ? { ...draft, source: example.source } : draft;
+          }),
+        );
+      })
+      .catch((error: unknown) => setLoadError(error instanceof Error ? error.message : 'Erro ao carregar exemplos.'));
   }, []);
 
-  const algorithm = algorithms.find((a) => a.id === algorithmId);
+  const modeInfo = MODES.find((m) => m.id === mode) ?? MODES[0]!;
 
   const handleRun = async () => {
+    const inputs = inputsText
+      .split(',')
+      .map((value) => value.trim())
+      .filter((value) => value !== '');
+
     setBusy(true);
-    setStatus('Simulando…');
+    setRunError(null);
     try {
-      // Só algoritmos preemptivos têm troca de contexto; sem a opção marcada, o tempo é zero.
-      const preemptive = algorithm?.preemptive ?? false;
-      const overload = preemptive && overloadEnabled ? overloadTime : 0;
-      const data = await runSimulation({ algorithm: algorithmId, quantum, overload, processes });
-      setErrors([]);
+      const data = await runScheduler({
+        mode,
+        quantum,
+        processes: processes.map((draft) => ({ source: draft.source })),
+        inputs,
+      });
       setResult(data);
-      setStatus('Simulação pronta.');
     } catch (error) {
       setResult(null);
-      if (error instanceof ApiFailure) {
-        setErrors(error.errors);
-        setStatus(error.offline ? 'O back-end não respondeu.' : 'Há erros nos dados.');
-      } else {
-        setStatus('Algo inesperado aconteceu.');
-      }
+      setRunError(error instanceof Error ? error.message : 'Algo inesperado aconteceu.');
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <div className="app">
+    <div className="app" data-theme={theme}>
       <a className="skip-link" href="#conteudo">
         Pular para o conteúdo
       </a>
 
-      <header className="app-header">
-        <div>
-          <h1>Escalonamento de CPU</h1>
-          <p>Escolha um algoritmo, cadastre os processos e veja quem usa a CPU a cada instante.</p>
-        </div>
-      </header>
-
-      <p className="visually-hidden" role="status" aria-live="polite">
-        {status}
-      </p>
+      <TopBar
+        mode={mode}
+        modes={MODES}
+        quantum={quantum}
+        theme={theme}
+        busy={busy}
+        onModeChange={setMode}
+        onQuantumChange={setQuantum}
+        preemptive={modeInfo.preemptive}
+        onThemeToggle={() => setTheme((current) => (current === 'dark' ? 'light' : 'dark'))}
+        onRun={handleRun}
+      />
 
       <main id="conteudo" className="workspace">
-        <div className="workspace-side">
-          {errors.length > 0 && (
-            <section className="alert" role="alert" aria-labelledby="alert-title">
-              <h2 id="alert-title">Corrija para simular</h2>
-              <ul>
-                {errors.map((error, index) => (
-                  <li key={index}>{error.message}</li>
-                ))}
-              </ul>
-            </section>
+        <aside className="panel panel-left" aria-label="Montagem do cenário">
+          {loadError && (
+            <div className="alert" role="alert">
+              {loadError}
+            </div>
           )}
-
           <ProcessEditor
-            algorithms={algorithms}
-            algorithmId={algorithmId}
-            quantum={quantum}
+            programs={programs}
             processes={processes}
-            errors={errors}
-            busy={busy}
-            onAlgorithmChange={setAlgorithmId}
-            onQuantumChange={setQuantum}
-            overloadEnabled={overloadEnabled}
-            overloadTime={overloadTime}
-            onOverloadEnabledChange={setOverloadEnabled}
-            onOverloadTimeChange={setOverloadTime}
+            activeIndex={activeProcess}
+            onActiveChange={setActiveProcess}
             onProcessesChange={setProcesses}
-            onRun={handleRun}
+            inputsText={inputsText}
+            onInputsChange={setInputsText}
+            modeNote={modeInfo.note}
           />
+        </aside>
 
-          <details className="glossary">
-            <summary>O que significam os termos?</summary>
-            <dl>
-              {GLOSSARY.map((item) => (
-                <div key={item.term} className="glossary-item">
-                  <dt>{item.term}</dt>
-                  <dd>{item.meaning}</dd>
-                </div>
-              ))}
-            </dl>
-          </details>
-        </div>
-
-        <div className="workspace-main">
-          {result ? (
-            <ResultView
-              result={result}
-              algorithmName={algorithm?.name ?? result.algorithm}
-              algorithmRule={algorithm?.rule ?? ''}
-            />
-          ) : (
-            <section className="card empty-state" aria-labelledby="empty-title">
-              <h2 id="empty-title" className="section-title">
-                3. Resultado
-              </h2>
-              <p className="hint">
-                Monte o cenário à esquerda e clique em Simular. O diagrama de Gantt, os indicadores e o registro de
-                eventos aparecem aqui.
-              </p>
-            </section>
-          )}
-        </div>
+        <section className="panel panel-right" aria-label="Resultado da simulação">
+          <ResultView result={result} runError={runError} busy={busy} processCount={processes.length} />
+        </section>
       </main>
     </div>
   );

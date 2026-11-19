@@ -1,92 +1,64 @@
-export type AlgorithmId = 'fifo' | 'sjf' | 'rr' | 'priority';
+// Formatos devolvidos pela ponte (front-end/bridge/schedulerBridge.ts), que executa o back-end real.
 
-export interface Algorithm {
-  id: AlgorithmId;
-  name: string;
-  shortName: string;
-  preemptive: boolean;
-  usesQuantum: boolean;
-  usesPriority: boolean;
-  description: string;
-  rule: string;
+export type SchedulerMode = 'fifo' | 'round_robin' | 'sjf' | 'strf' | 'priority' | 'custom';
+
+export interface ProgramInfo {
+  id: string;
+  file: string;
+  source: string;
+  hasCode: boolean;
 }
 
-export interface ProcessRow {
-  name: string;
-  arrival: number;
-  burst: number;
-  priority: number;
+export interface ProgramsResponse {
+  programs: ProgramInfo[];
+  modes: SchedulerMode[];
 }
 
-export interface SimulateRequest {
-  algorithm: AlgorithmId;
+export interface RunRequest {
+  mode: SchedulerMode;
   quantum: number;
-  overload: number;
-  processes: ProcessRow[];
+  processes: { source: string }[];
+  inputs: string[];
 }
 
-export interface ApiError {
-  field: string;
-  message: string;
-  row: number | null;
+// Um evento impresso pelo back-end, com o instante em que aconteceu.
+export interface SchedulerEvent {
+  order: number;
+  kind: 'input' | 'print' | 'exit' | 'preempt';
+  process: number;
+  value: string | null;
+  register: number | null;
+  tick: number | null;
 }
 
-// Estado de um processo em um instante.
-export type ProcessState = 'future' | 'ready' | 'run' | 'done';
-
-// Um instante da simulação. cpu: índice do processo, -1 (ociosa) ou -2 (troca de contexto).
-export interface Frame {
-  cpu: number;
-  states: ProcessState[];
+// Uma instrução executada pela CPU: 1 instante de tempo.
+export interface TickInfo {
+  tick: number;
+  process: number;
+  opcode: string;
 }
 
-export interface Segment {
-  cpu: number;
-  kind: 'process' | 'idle' | 'overload';
-  start: number;
-  end: number;
-}
-
-export interface ProcessStat {
-  name: string;
-  arrival: number;
-  burst: number;
-  priority: number;
-  firstStart: number;
-  finish: number;
-  waitingTime: number;
-  turnaroundTime: number;
-  responseTime: number;
+export interface ProcessSummary {
+  id: number;
+  prints: string[];
+  requestedInput: number;
   preemptions: number;
+  exitOrder: number | null;
+  averageQuantum: number | null;
 }
 
-export type LogType = 'chegada' | 'entra' | 'preempta' | 'sobrecarga' | 'termina' | 'ociosa';
+export type RunStatus = 'ok' | 'error' | 'missing_input' | 'timeout' | 'invalid';
 
-export interface LogEntry {
-  time: number;
-  type: LogType;
-  process: string | null;
-  message: string;
-}
-
-export interface SimulationResult {
-  algorithm: AlgorithmId;
-  quantum: number | null;
-  overload: number;
-  preemptive: boolean;
-  totalTime: number;
-  frames: Frame[];
-  segments: Segment[];
-  processes: { index: number; name: string }[];
-  processStats: ProcessStat[];
-  metrics: {
-    averageWaitingTime: number;
-    averageTurnaroundTime: number;
-    averageResponseTime: number;
-    idlePercentage: number;
-    preemptions: number;
-    contextSwitches: number;
-    overloadUnits: number;
-  };
-  logs: LogEntry[];
+export interface RunResult {
+  status: RunStatus;
+  message: string | null;
+  mode: SchedulerMode;
+  exitCode: number | null;
+  stdout: string;
+  stderr: string;
+  inputsUsed: string[];
+  totalTicks: number;
+  ticks: TickInfo[];
+  events: SchedulerEvent[];
+  processes: ProcessSummary[];
 }

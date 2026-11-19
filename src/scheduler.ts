@@ -37,12 +37,14 @@ export interface ProcessState {
   maxPcValue: number;
   status: ProcessStatus;
   curSyscall: Syscall;
+  syscallReg: number; // registrador usado pelo input/print (o `ra` da instrução)
   quantumUsedThisRun: number;
   avgQuantumUsed: number;
 }
 
 let nextProcessId = 0;
-let schedulerQuantum = 6;
+// Quantum padrão 6; a ponte do front-end pode escolher outro valor com SCHEDULER_QUANTUM.
+let schedulerQuantum = Number(process.env.SCHEDULER_QUANTUM) || 6;
 let schedulerMode: SchedulerMode = "fifo";
 
 const opcodeQuantumCost: Record<Opcode, number> = {
@@ -69,7 +71,7 @@ function createProcess(program: Program, priority = 0): ProcessState {
     registers: Array.from({ length: 256 }, () => 0n), memory: new Uint8Array(64 * 1024),
     maxPcValue: program.instructions.length - 1, status: "run",
     quantumUsedThisRun: 0, avgQuantumUsed: 0,
-    curSyscall: "NONE",
+    curSyscall: "NONE", syscallReg: 0,
   };
 }
 
@@ -122,6 +124,9 @@ function readInput(prompt: string): Promise<bigint> {
   });
 }
 
+// Contador de instruções executadas: cada uma vale 1 instante no trace (SCHEDULER_TRACE=1).
+let executedInstructions = 0;
+
 /** Executes until the quantum expires (preemptive modes), or until block/exit. */
 function processRunStep(p: ProcessState, ignoreQuantum: boolean): number {
 
@@ -136,6 +141,9 @@ function processRunStep(p: ProcessState, ignoreQuantum: boolean): number {
     assert(inst, `Invalid program counter ${p.pc} in process ${p.id}`);
 
     const ra = inst.ra ?? 0, rb = inst.rb ?? 0, rc = inst.rc ?? 0, imm = inst.imm ?? 0;
+
+    if(process.env.SCHEDULER_TRACE === "1") console.log(`trace ${executedInstructions} ${p.id} ${inst.opcode}`);
+    executedInstructions++;
 
     let advancePc = true;
 
@@ -209,6 +217,7 @@ function processRunStep(p: ProcessState, ignoreQuantum: boolean): number {
       case "INPUT":
       p.status = "block";
       p.curSyscall = "INPUT";
+      p.syscallReg = ra;
 
       break;
 
@@ -216,6 +225,7 @@ function processRunStep(p: ProcessState, ignoreQuantum: boolean): number {
 
       p.status = "block";
       p.curSyscall = "PRINT";
+      p.syscallReg = ra;
 
       break;
     }
@@ -224,10 +234,16 @@ function processRunStep(p: ProcessState, ignoreQuantum: boolean): number {
       p.pc++;
     }
 
-    if(p.pc > p.maxPcValue) {
+    // Só termina se não estiver bloqueado: um print/input na última instrução ainda precisa do syscall.
+    if(p.pc > p.maxPcValue && p.status === "run") {
       p.status = "exit";
     }
 
+  }
+
+  // Preempção: a fatia (quantum) acabou sem bloquear nem terminar, então o processo perde a CPU.
+  if(!ignoreQuantum && p.status === "run") {
+    console.log(`process ${p.id} preempted`);
   }
 
   p.quantumUsedThisRun = ignoreQuantum ? 0 : used;
@@ -244,18 +260,18 @@ async function syscallHandler(blockedQueue: ProcessState[], runQueue: ProcessSta
 
     switch(p.curSyscall) {
       case "INPUT":
-      p.registers[0] = await readInput(`process ${p.id} requesting input for r${0} = `);
+      p.registers[p.syscallReg] = await readInput(`process ${p.id} requesting input for r${p.syscallReg} = `);
       didSyscall = true;
       break;
 
       case "PRINT":
-      console.log(`process ${p.id} print r${0} = ${p.registers[0]}`);
+      console.log(`process ${p.id} print r${p.syscallReg} = ${p.registers[p.syscallReg]}`);
       didSyscall = true;
       break;
     }
 
     if(didSyscall) {
-      p.status = "run";
+      p.status = p.pc > p.maxPcValue ? "exit" : "run";
       runQueue.push(p);
     }
 
@@ -277,6 +293,7 @@ async function processScheduler(initial: ProcessState[]): Promise<ProcessState[]
     // Snapshot means each process in this round receives one turn.
     for(const p of currentQueue) {
       if(p.status === "exit") {
+        console.log(`process ${p.id} exitedQueue...`);
         exitedQueue.push(p);
         continue;
       }
