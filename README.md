@@ -1,45 +1,35 @@
-# scheduler
+# Process scheduler simulator
 
-This is a project for my OS class. The idea is to learn about process scheduling.
+A small OS class project for experimenting with process scheduling using assembly-like programs.
 
-## Build and run
+## Run the web app
 
-To build first run:
-
-```
-# windows (developer command prompt)
-
-setup.bat
-
-# linux or mac
-
-./setup.sh
+```sh
+npm run web:install # first time only
+npm run web:build
+npm run frontend
 ```
 
-Then once the `nob` build program is build run `./nob.exe` and the project will build.
+Vite serves the React frontend and the API bridge. The bridge imports the scheduler directly into the Vite server process. When an assembly program requests input, the simulation waits for a value entered in that process's console in the left sidebar.
 
-Once built, run `./scheduler.exe` or `./scheduler`.
+The controls above the workspace set the simulated duration of blocking syscalls (`input` and `print`) and preemption/context switches. Durations range from 0 to 20 ticks and default to 1. The Gantt chart includes these event ticks; during a blocking event, the process is blocked and the CPU is shown as free.
 
-## Contributing
+## Debug frontend and backend together
 
-O código principal está em `src/app/scheduler.cpp` e `src/app/scheduler.hpp`.
+In VS Code, open **Run and Debug** and start **Frontend + backend: Vite and Chrome**. It launches Vite under the Node debugger, then opens Chrome when the server is ready. Set breakpoints in `back/scheduler.ts`, use the frontend to configure and run a process, and enter requested values in its console. The two `Backend CLI` profiles are available for debugging terminal runs.
 
-Escalonamento pode ser feito ordenando a fila de processos. No nosso caso isso basicamente quer
-dizer escrever uma função de comparação para o `qsort()`. Essa função deve ter a seguinte interface:
+## Run from the terminal
 
+```sh
+npm run scheduler -- round_robin tests/fibonacci.asm tests/test2.asm
 ```
-int compare(const void *a, const void *b);
-```
 
-No laço do escalonador tem um `switch(scheduler_mode) {...}` que decide qual função de comparação usar
-baseado no valor do `scheduler_mode` que é do tipo `enum Scheduler_mode`.
+Supported modes: `fifo`, `round_robin`, `sjf`, `strf`, `priority`, and `custom`. Set `SCHEDULER_QUANTUM` to change the default quantum of 6; set `SCHEDULER_TRACE=1` to print each executed instruction.
 
-Então para adicionar um novo algoritmo de escalonamento, basta implementar uma função de comparação,
-adicionar um valor ao `enum Scheduler_mode` e um caso para ele no `switch` do escalonador, e uma opção
-de argumento CLI para ativar aquele modo do escalonador (isso seria na função `main`).
+## Code layout
 
-Como não estamos preocupados com multithreading, podem usar qualquer variável global dentro da função
-de comparação. Veja `compare_processes_by_instruction_count()` ou qualquer uma das outras para uma ideia de como
-escrever uma dessas funções.
-
-
+- `back/scheduler.ts` contains the assembler and reusable scheduler logic. It accepts an async input callback and output/tick callbacks, so it can run from both the CLI and the web server.
+- `back/cli.ts` adapts terminal files, stdin, stdout, and command-line arguments to the scheduler API.
+- `front/bridge/schedulerBridge.ts` exposes the API through Vite and pauses each run for browser input when needed.
+- `front/src` contains the React UI. The process console shows that process's output and accepts input while it is blocked.
+- `tests/*.asm` contains sample programs loaded by the frontend.

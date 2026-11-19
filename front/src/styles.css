@@ -496,6 +496,64 @@ p {
   font-size: 0.9rem;
 }
 
+.process-console {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.process-console .section-head {
+  margin-bottom: 8px;
+}
+
+.console-status {
+  color: var(--text-2);
+  font-size: 0.72rem;
+}
+
+.console-status.is-waiting {
+  color: var(--warn);
+}
+
+.process-console-output {
+  min-height: 84px;
+  max-height: 180px;
+  overflow: auto;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel-2);
+  color: var(--text);
+  font-size: 0.8rem;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.process-console-form {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.process-console-form .text-input {
+  min-width: 0;
+  flex: 1;
+}
+
+.process-console-form .ghost-button {
+  flex-shrink: 0;
+}
+
+.process-console-form :disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.console-input-error {
+  color: var(--error);
+}
+
 /* ==========================================================================
    Resultado (painel direito)
    ========================================================================== */
@@ -737,6 +795,15 @@ p {
   font-size: 0.7rem;
   font-weight: 700;
   color: #0b0d1c;
+}
+
+.gantt-event-icon {
+  width: 16px;
+  height: 16px;
+  stroke: #0b0d1c;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .cpu-label {

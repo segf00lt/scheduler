@@ -1,7 +1,96 @@
-import * as fs from "node:fs";
-import * as readline from "node:readline";
 
-export type SchedulerMode = "fifo" | "round_robin" | "sjf" | "strf" | "priority" | "custom" | "edf";
+export const SCHEDULER_MODES = ["fifo", "round_robin", "sjf", "strf", "priority", "custom"] as const;
+export const DEFAULT_QUANTUM = 6;
+export const MIN_QUANTUM = 1;
+export const MAX_QUANTUM = 20;
+export const DEFAULT_BLOCKING_DURATION = 1;
+export const DEFAULT_PREEMPTION_DURATION = 1;
+export const MIN_EVENT_DURATION = 0;
+export const MAX_EVENT_DURATION = 20;
+export const MAX_PROCESSES = 6;
+export const MAX_INSTRUCTIONS = 100_000;
+export const SCHEDULER_EVENT_KINDS = ['input', 'print', 'exit', 'preempt'] as const;
+
+export type SchedulerMode = (typeof SCHEDULER_MODES)[number];
+
+export interface ProgramInfo {
+  id: string;
+  file: string;
+  source: string;
+  hasCode: boolean;
+}
+
+export interface ProgramsResponse {
+  programs: ProgramInfo[];
+  modes: SchedulerMode[];
+}
+
+export interface SchedulerOptions {
+  quantum: number;
+  blockingDuration: number;
+  preemptionDuration: number;
+}
+
+export interface RunRequest extends SchedulerOptions {
+  mode: SchedulerMode;
+  processes: { source: string }[];
+}
+
+export interface RunSnapshot {
+  status: 'running' | 'done';
+  stdout: string;
+  events: SchedulerEvent[];
+  waitingInput: { process: number; register: number } | null;
+  result: RunResult | null;
+}
+
+export type SchedulerEventKind = (typeof SCHEDULER_EVENT_KINDS)[number];
+
+export interface SchedulerEvent {
+  order: number;
+  kind: SchedulerEventKind;
+  process: number;
+  value: string | null;
+  register: number | null;
+  tick: number | null;
+  duration: number;
+}
+
+export type SchedulerTickKind = 'instruction' | 'blocking' | 'preemption';
+
+export interface TickInfo {
+  tick: number;
+  process: number;
+  kind: SchedulerTickKind;
+  event: SchedulerEventKind | null;
+  opcode: string | null;
+}
+
+export interface ProcessSummary {
+  id: number;
+  prints: string[];
+  requestedInput: number;
+  preemptions: number;
+  exitOrder: number | null;
+  averageQuantum: number | null;
+  turnaroundTime: number | null;
+}
+
+export type RunStatus = 'ok' | 'error' | 'missing_input' | 'timeout' | 'invalid';
+
+export interface RunResult {
+  status: RunStatus;
+  message: string | null;
+  mode: SchedulerMode;
+  exitCode: number | null;
+  stdout: string;
+  stderr: string;
+  inputsUsed: string[];
+  totalTicks: number;
+  ticks: TickInfo[];
+  events: SchedulerEvent[];
+  processes: ProcessSummary[];
+}
 
 export type Opcode =
 | "GOTO" | "IFGOTO" | "ADD" | "SUB" | "MUL" | "DIV" | "LT" | "GTE"
@@ -38,14 +127,11 @@ export interface ProcessState {
   status: ProcessStatus;
   curSyscall: Syscall;
   syscallReg: number; // registrador usado pelo input/print (o `ra` da instrução)
+  lastTick: number | null;
+  completionTime: number | null;
   quantumUsedThisRun: number;
   avgQuantumUsed: number;
 }
-
-let nextProcessId = 0;
-// Quantum padrão 6; a ponte do front-end pode escolher outro valor com SCHEDULER_QUANTUM.
-let schedulerQuantum = Number(process.env.SCHEDULER_QUANTUM) || 6;
-let schedulerMode: SchedulerMode = "fifo";
 
 const opcodeQuantumCost: Record<Opcode, number> = {
   GOTO: 1, IFGOTO: 1, ADD: 1, SUB: 1, MUL: 1, DIV: 1, LT: 1, GTE: 1,
@@ -60,18 +146,25 @@ function exponentialMovingAverage(previous: number, sample: number, alpha = 0.12
   return previous + alpha * (sample - previous);
 }
 
-function isPreemptive(mode: SchedulerMode): boolean {
-  return mode === "strf" || mode === "round_robin" || mode === "priority" || mode === "edf";
+export function isPreemptiveMode(mode: SchedulerMode): boolean {
+  return mode === "strf" || mode === "round_robin" || mode === "priority";
 }
 
-function createProcess(program: Program, priority = 0): ProcessState {
+export function isBlockingEvent(event: SchedulerEvent | SchedulerEventKind | null | undefined): boolean {
+  const kind = typeof event === 'string' ? event : event?.kind;
+  return kind === 'input' || kind === 'print';
+}
+
+function createProcess(program: Program, id: number, priority = 0): ProcessState {
   assert(program.instructions.length > 0, "Cannot create a process from an empty program");
   return {
-    id: nextProcessId++, priority, instructions: program.instructions, pc: 0,
+    id, priority, instructions: program.instructions, pc: 0,
     registers: Array.from({ length: 256 }, () => 0n), memory: new Uint8Array(64 * 1024),
     maxPcValue: program.instructions.length - 1, status: "run",
     quantumUsedThisRun: 0, avgQuantumUsed: 0,
     curSyscall: "NONE", syscallReg: 0,
+    lastTick: null,
+    completionTime: null,
   };
 }
 
@@ -79,8 +172,8 @@ function remainingInstructions(p: ProcessState): number {
   return p.maxPcValue - p.pc + 1;
 }
 
-function sortQueue(queue: ProcessState[]): void {
-  switch(schedulerMode) {
+function sortQueue(queue: ProcessState[], mode: SchedulerMode): void {
+  switch(mode) {
     case "fifo": case "round_robin":
     return;
     case "custom":
@@ -97,40 +190,30 @@ function sortQueue(queue: ProcessState[]): void {
   }
 }
 
-// function readInput(prompt: string): bigint {
-//   process.stdout.write(prompt);
-//   const buffer = Buffer.alloc(1024);
-//   const count = fs.readSync(0, buffer, 0, buffer.length, null);
-//   const value = buffer.toString("utf8", 0, count).trim();
-//   const parsed = BigInt(value || "0");
-//   return BigInt.asUintN(64, parsed);
-// }
-
-const rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout,
-});
-
-function readInput(prompt: string): Promise<bigint> {
-  return new Promise((resolve, reject) => {
-    rl.question(prompt, (answer) => {
-      try {
-        const parsed = BigInt(answer.trim() || "0");
-        resolve(BigInt.asUintN(64, parsed));
-      } catch (error) {
-        reject(error);
-      }
-    });
-  });
+export interface SchedulerCallbacks {
+  input: (process: number, register: number) => Promise<string>;
+  output: (text: string) => void;
+  tick?: (tick: TickInfo) => void;
+  event?: (event: SchedulerEvent) => void;
+  maxInstructions?: number;
 }
 
-// Contador de instruções executadas: cada uma vale 1 instante no trace (SCHEDULER_TRACE=1).
-let executedInstructions = 0;
+export function hasInstructions(source: string): boolean {
+  return source.split(/\r?\n/).some((line) => line.replace(/;.*/, '').trim() !== '');
+}
 
 /** Executes until the quantum expires (preemptive modes), or until block/exit. */
-function processRunStep(p: ProcessState, ignoreQuantum: boolean): number {
+function processRunStep(
+  p: ProcessState,
+  ignoreQuantum: boolean,
+  options: SchedulerOptions,
+  callbacks: SchedulerCallbacks,
+  clock: { tick: number; instructions: number },
+  createTimedEvent: (kind: 'preempt', process: ProcessState, value: string | null, register: number | null) => SchedulerEvent,
+  advanceEventDuration: (event: SchedulerEvent) => void,
+): number {
 
-  let quantumRemaining = schedulerQuantum;
+  let quantumRemaining = options.quantum;
   let used = 0;
   p.status = "run";
 
@@ -142,8 +225,11 @@ function processRunStep(p: ProcessState, ignoreQuantum: boolean): number {
 
     const ra = inst.ra ?? 0, rb = inst.rb ?? 0, rc = inst.rc ?? 0, imm = inst.imm ?? 0;
 
-    if(process.env.SCHEDULER_TRACE === "1") console.log(`trace ${executedInstructions} ${p.id} ${inst.opcode}`);
-    executedInstructions++;
+    if(clock.instructions >= (callbacks.maxInstructions ?? MAX_INSTRUCTIONS)) throw new Error("Instruction limit exceeded; possible infinite loop.");
+    callbacks.tick?.({ tick: clock.tick, process: p.id, kind: 'instruction', event: null, opcode: inst.opcode });
+    p.lastTick = clock.tick;
+    clock.tick++;
+    clock.instructions++;
 
     let advancePc = true;
 
@@ -243,7 +329,9 @@ function processRunStep(p: ProcessState, ignoreQuantum: boolean): number {
 
   // Preempção: a fatia (quantum) acabou sem bloquear nem terminar, então o processo perde a CPU.
   if(!ignoreQuantum && p.status === "run") {
-    console.log(`process ${p.id} preempted`);
+    callbacks.output(`process ${p.id} preempted\n`);
+    const event = createTimedEvent('preempt', p, null, null);
+    advanceEventDuration(event);
   }
 
   p.quantumUsedThisRun = ignoreQuantum ? 0 : used;
@@ -251,7 +339,13 @@ function processRunStep(p: ProcessState, ignoreQuantum: boolean): number {
   return p.quantumUsedThisRun;
 }
 
-async function syscallHandler(blockedQueue: ProcessState[], runQueue: ProcessState[]): Promise<void> {
+async function syscallHandler(
+  blockedQueue: ProcessState[],
+  runQueue: ProcessState[],
+  callbacks: SchedulerCallbacks,
+  createTimedEvent: (kind: 'input' | 'print', process: ProcessState, value: string | null, register: number | null) => SchedulerEvent,
+  advanceEventDuration: (event: SchedulerEvent) => void,
+): Promise<void> {
 
   for(const p of blockedQueue) {
     assert(p.status === "block", "expected blocked process");
@@ -260,14 +354,26 @@ async function syscallHandler(blockedQueue: ProcessState[], runQueue: ProcessSta
 
     switch(p.curSyscall) {
       case "INPUT":
-      p.registers[p.syscallReg] = await readInput(`process ${p.id} requesting input for r${p.syscallReg} = `);
+      {
+      const event = createTimedEvent('input', p, null, p.syscallReg);
+      callbacks.output(`process ${p.id} requesting input for r${p.syscallReg} = `);
+      const value = await callbacks.input(p.id, p.syscallReg);
+      assert(/^-?\d+$/.test(value.trim()), `Invalid input '${value}'`);
+      event.value = value.trim();
+      p.registers[p.syscallReg] = BigInt.asUintN(64, BigInt(value.trim()));
+      advanceEventDuration(event);
       didSyscall = true;
       break;
+      }
 
       case "PRINT":
-      console.log(`process ${p.id} print r${p.syscallReg} = ${p.registers[p.syscallReg]}`);
+      {
+      const event = createTimedEvent('print', p, String(p.registers[p.syscallReg]), p.syscallReg);
+      callbacks.output(`process ${p.id} print r${p.syscallReg} = ${p.registers[p.syscallReg]}\n`);
+      advanceEventDuration(event);
       didSyscall = true;
       break;
+      }
     }
 
     if(didSyscall) {
@@ -278,48 +384,99 @@ async function syscallHandler(blockedQueue: ProcessState[], runQueue: ProcessSta
   }
 }
 
-async function processScheduler(initial: ProcessState[]): Promise<ProcessState[]> {
+export async function processScheduler(initial: ProcessState[], mode: SchedulerMode, options: SchedulerOptions, callbacks: SchedulerCallbacks): Promise<ProcessState[]> {
 
   let currentQueue: ProcessState[] = [...initial];
   const exitedQueue: ProcessState[] = [];
   let blockedQueue: ProcessState[] = [];
-  const ignoreQuantum = !isPreemptive(schedulerMode);
+  const ignoreQuantum = !isPreemptiveMode(mode);
+  const clock = { tick: 0, instructions: 0 };
+  let eventOrder = 0;
+  const emitEvent = (event: Omit<SchedulerEvent, 'order'>): SchedulerEvent => {
+    const orderedEvent = { order: ++eventOrder, ...event };
+    callbacks.event?.(orderedEvent);
+    return orderedEvent;
+  };
+  const createTimedEvent = (
+    kind: 'input' | 'print' | 'preempt',
+    process: ProcessState,
+    value: string | null,
+    register: number | null,
+  ): SchedulerEvent => {
+    const duration = isBlockingEvent(kind) ? options.blockingDuration : options.preemptionDuration;
+    return emitEvent({
+      kind,
+      process: process.id,
+      value,
+      register,
+      tick: duration > 0 ? clock.tick : process.lastTick,
+      duration,
+    });
+  };
+  const advanceEventDuration = (event: SchedulerEvent): void => {
+    const kind: SchedulerTickKind = isBlockingEvent(event) ? 'blocking' : 'preemption';
+    for (let i = 0; i < event.duration; i++) {
+      callbacks.tick?.({ tick: clock.tick, process: event.process, kind, event: event.kind, opcode: null });
+      clock.tick++;
+    }
+  };
 
   while(currentQueue.length > 0) {
-    sortQueue(currentQueue);
+    sortQueue(currentQueue, mode);
 
     const nextQueue: ProcessState[] = [];
 
     // Snapshot means each process in this round receives one turn.
-    for(const p of currentQueue) {
+    for(let i = 0; i < currentQueue.length; i++) {
+
+      let p = currentQueue[i];
+      
       if(p.status === "exit") {
-        console.log(`process ${p.id} exitedQueue...`);
+        p.completionTime ??= clock.tick;
+        callbacks.output(`process ${p.id} exitedQueue...\n`);
+        emitEvent({ kind: 'exit', process: p.id, value: null, register: null, tick: clock.tick, duration: 0 });
         exitedQueue.push(p);
         continue;
       }
 
-      processRunStep(p, ignoreQuantum);
+      processRunStep(p, ignoreQuantum, options, callbacks, clock, createTimedEvent, advanceEventDuration);
 
       if((p.status as ProcessStatus) === "exit") {
-        console.log(`process ${p.id} exitedQueue...`);
+        p.completionTime = clock.tick;
+        callbacks.output(`process ${p.id} exitedQueue...\n`);
+        emitEvent({ kind: 'exit', process: p.id, value: null, register: null, tick: clock.tick, duration: 0 });
         exitedQueue.push(p);
       } else if((p.status as ProcessStatus) === "block") {
         blockedQueue.push(p);
+
+        // NOTE jfd 19/11/26:
+        // If the scheduling mode is not preemptive then we don't want to have the other process get in front of the one that was blocked on a syscall.
+        // So in order to do that we do this very nasty hack :D
+        if(!isPreemptiveMode(mode)) {
+          await syscallHandler(blockedQueue, nextQueue, callbacks, createTimedEvent, advanceEventDuration);
+          nextQueue.push(...currentQueue.slice(i+1));
+          currentQueue = [];
+          blockedQueue = [];
+          break;
+        }
+
       } else {
         // The C implementation treats BLOCK as ready again after the operation.
         p.status = "run";
         nextQueue.push(p);
       }
+
     }
+
     currentQueue = nextQueue;
 
-    await syscallHandler(blockedQueue, currentQueue);
+    await syscallHandler(blockedQueue, currentQueue, callbacks, createTimedEvent, advanceEventDuration);
     blockedQueue = [];
 
   }
 
   for(const p of exitedQueue) {
-    console.log(`process ${p.id} average quantum used: ${p.avgQuantumUsed.toFixed(3)}`);
+    callbacks.output(`process ${p.id} average quantum used: ${p.avgQuantumUsed.toFixed(3)}\n`);
   }
 
   return exitedQueue;
@@ -342,20 +499,25 @@ function parseImmediate(token: string): number {
   return value;
 }
 
-function assemble(source: string): Program {
+export function assemble(source: string): Program {
   const lines = source.split(/\r?\n/).map(line => line.replace(/;.*/, "").trim()).filter(Boolean);
+
   const labels = new Map<string, number>();
+
   let pc = 0;
   for(const line of lines) {
     const label = line.match(/^([\w.$-]+):\s*$/);
     if(label) labels.set(label[1], pc); else pc++;
   }
+
   const instructions: Instruction[] = [];
+  
   const target = (name: string): number => {
     const value = labels.get(name);
     assert(value !== undefined, `Unknown label '${name}'`);
     return value;
   };
+  
   for(const line of lines) {
     if(/^[\w.$-]+:\s*$/.test(line)) continue;
     const [opRaw, ...rest] = line.split(/\s+/);
@@ -378,31 +540,16 @@ function assemble(source: string): Program {
     else throw new Error(`Unknown instruction '${opRaw}'`);
     instructions.push(inst);
   }
+  
   return { instructions };
 }
 
-function main(argv: string[]): number {
-  if(argv.length < 2) {
-    console.error("Usage: scheduler.ts <fifo|round_robin|sjf|strf|priority|custom> <file.asm>...");
-    return 1;
+export async function runScheduler(sources: string[], mode: SchedulerMode, options: SchedulerOptions, callbacks: SchedulerCallbacks): Promise<ProcessState[]> {
+  assert(SCHEDULER_MODES.includes(mode), `Unknown scheduler mode '${mode}'`);
+  assert(Number.isInteger(options.quantum) && options.quantum >= MIN_QUANTUM && options.quantum <= MAX_QUANTUM, `Quantum must be between ${MIN_QUANTUM} and ${MAX_QUANTUM}`);
+  for (const [name, value] of [['blocking duration', options.blockingDuration], ['preemption duration', options.preemptionDuration]] as const) {
+    assert(Number.isInteger(value) && value >= MIN_EVENT_DURATION && value <= MAX_EVENT_DURATION, `${name} must be between ${MIN_EVENT_DURATION} and ${MAX_EVENT_DURATION}`);
   }
-  const mode = argv[0] as SchedulerMode;
-  const valid: SchedulerMode[] = ["fifo", "round_robin", "sjf", "strf", "priority", "custom"];
-  if(!valid.includes(mode)) { console.error(`Unknown option '${argv[0]}'`); return 1; }
-  schedulerMode = mode;
-  const queue: ProcessState[] = [];
-  try {
-    for(const path of argv.slice(1)) {
-      if(!fs.existsSync(path)) throw new Error(`No such file '${path}'`);
-      const program = assemble(fs.readFileSync(path, "utf8"));
-      queue.push(createProcess(program));
-    }
-    processScheduler(queue);
-    return 0;
-  } catch (error) {
-    console.error(error instanceof Error ? error.message : error);
-    return 1;
-  }
+  const queue = sources.map((source, id) => createProcess(assemble(source), id));
+  return processScheduler(queue, mode, options, callbacks);
 }
-
-if(require.main === module) process.exitCode = main(process.argv.slice(2));

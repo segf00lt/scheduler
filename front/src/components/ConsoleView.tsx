@@ -1,4 +1,4 @@
-import type { RunResult } from '../types';
+import type { RunResult } from '../types.js';
 
 interface Props {
   result: RunResult;

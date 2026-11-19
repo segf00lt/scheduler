@@ -1,21 +1,27 @@
-import type { RunResult } from '../types';
-import { MODES, PROCESS_COLORS } from '../constants';
+import type { RunResult } from '../types.js';
+import { MODES, PROCESS_COLORS } from '../constants.js';
 
 interface Props {
   result: RunResult;
 }
 
 const fmtQuantum = (value: number) => value.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 });
+const fmtTurnaround = (value: number) => `${value.toLocaleString('pt-BR', { maximumFractionDigits: 2 })} instantes`;
 
 export function SummaryView({ result }: Props) {
   const { processes, events, mode, inputsUsed } = result;
   const modeInfo = MODES.find((m) => m.id === mode);
   const finished = processes.filter((p) => p.exitOrder !== null).length;
+  const completed = processes.filter((p) => p.turnaroundTime !== null);
+  const averageTurnaround = completed.length
+    ? completed.reduce((sum, process) => sum + (process.turnaroundTime ?? 0), 0) / completed.length
+    : null;
   const prints = events.filter((e) => e.kind === 'print').length;
 
   const cards = [
     { label: 'Modo', value: modeInfo?.label ?? mode, help: modeInfo?.preemptive ? 'Preemptivo' : 'Não preemptivo' },
     { label: 'Terminaram', value: `${finished} de ${processes.length}`, help: 'Processos que chegaram ao fim.' },
+    { label: 'Turnaround médio', value: averageTurnaround === null ? '—' : fmtTurnaround(averageTurnaround), help: 'Tempo médio entre a chegada (t = 0) e o término.' },
     { label: 'Prints', value: String(prints), help: 'Valores impressos pelos processos.' },
     { label: 'Entradas usadas', value: String(inputsUsed.length), help: inputsUsed.length ? inputsUsed.join(', ') : 'Nenhuma.' },
   ];
@@ -42,6 +48,7 @@ export function SummaryView({ result }: Props) {
               <th scope="col">Preempções</th>
               <th scope="col">Prints (r0)</th>
               <th scope="col">Ordem de término</th>
+              <th scope="col">Turnaround</th>
               <th scope="col">Quantum médio usado</th>
             </tr>
           </thead>
@@ -60,6 +67,7 @@ export function SummaryView({ result }: Props) {
                 <td>{stat.preemptions}</td>
                 <td>{stat.prints.length ? stat.prints.join(', ') : '—'}</td>
                 <td>{stat.exitOrder ?? '—'}</td>
+                <td>{stat.turnaroundTime === null ? '—' : fmtTurnaround(stat.turnaroundTime)}</td>
                 <td>
                   {stat.averageQuantum === null || !modeInfo?.preemptive
                     ? '—'

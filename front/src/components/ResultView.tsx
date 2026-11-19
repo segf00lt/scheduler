@@ -1,8 +1,8 @@
 import { useState } from 'react';
-import type { RunResult } from '../types';
-import { ConsoleView } from './ConsoleView';
-import { SummaryView } from './SummaryView';
-import { TimelineView } from './TimelineView';
+import type { RunResult } from '../types.js';
+import { ConsoleView } from './ConsoleView.js';
+import { SummaryView } from './SummaryView.js';
+import { TimelineView } from './TimelineView.js';
 
 interface Props {
   result: RunResult | null;
@@ -80,7 +80,7 @@ export function ResultView({ result, runError, busy, processCount }: Props) {
           </h2>
           <p className="hint">
             Escolha o modo, o código assembly de cada processo e as entradas. Depois clique em Simular: o programa é
-            executado pelo back-end real (<code>src/scheduler.ts</code>) e o resultado aparece aqui.
+            executado pelo back-end (<code>back/scheduler.ts</code>) e o resultado aparece aqui.
           </p>
           {busy && <p className="hint">Executando…</p>}
         </section>

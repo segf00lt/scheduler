@@ -1,4 +1,28 @@
-import type { SchedulerEvent, SchedulerMode } from './types';
+import {
+  DEFAULT_BLOCKING_DURATION,
+  DEFAULT_QUANTUM,
+  DEFAULT_PREEMPTION_DURATION,
+  isPreemptiveMode,
+  MAX_PROCESSES,
+  MAX_EVENT_DURATION,
+  MAX_QUANTUM,
+  MIN_EVENT_DURATION,
+  MIN_QUANTUM,
+  SCHEDULER_MODES,
+  type SchedulerEvent,
+  type SchedulerMode,
+} from '../../back/scheduler.js';
+
+export {
+  DEFAULT_BLOCKING_DURATION,
+  DEFAULT_PREEMPTION_DURATION,
+  DEFAULT_QUANTUM,
+  MAX_EVENT_DURATION,
+  MAX_PROCESSES,
+  MAX_QUANTUM,
+  MIN_EVENT_DURATION,
+  MIN_QUANTUM,
+};
 
 export interface ModeInfo {
   id: SchedulerMode;
@@ -8,63 +32,48 @@ export interface ModeInfo {
   note: string;
 }
 
-// Os modos e as regras são os de src/scheduler.ts (sortQueue, isPreemptive e o `valid` do main).
-export const MODES: ModeInfo[] = [
-  {
-    id: 'fifo',
+// Names and teaching notes are UI copy; mode membership and preemption behavior come from the backend.
+const MODE_PRESENTATION: Record<SchedulerMode, Omit<ModeInfo, 'id' | 'preemptive'>> = {
+  fifo: {
     label: 'FIFO',
     title: 'FIFO (primeiro a chegar, primeiro a sair)',
-    preemptive: false,
     note: 'Cada processo roda até pedir entrada, imprimir ou terminar. A fila segue a ordem da lista.',
   },
-  {
-    id: 'round_robin',
+  round_robin: {
     label: 'Round Robin',
     title: 'Round Robin (revezamento)',
-    preemptive: true,
     note: 'Cada processo usa a CPU por um quantum (instruções, escolhidas no topo). Quando a fatia acaba, ele volta para o fim da fila.',
   },
-  {
-    id: 'sjf',
+  sjf: {
     label: 'SJF',
     title: 'SJF (menor tarefa primeiro)',
-    preemptive: false,
     note: 'Ordena a fila pelo tamanho do programa (número de instruções), não pelo tempo gasto. Quem começou não é interrompido.',
   },
-  {
-    id: 'strf',
+  strf: {
     label: 'STRF',
     title: 'STRF (menor tempo restante primeiro)',
-    preemptive: true,
     note: 'Ordena a fila pelas instruções que ainda faltam e interrompe por quantum.',
   },
-  {
-    id: 'priority',
+  priority: {
     label: 'Prioridade',
     title: 'Prioridade',
-    preemptive: true,
-    note: 'Atenção: o back-end atual não lê prioridades. Todos os processos entram com prioridade 0, então este modo se comporta como Round Robin.',
+    note: 'O back-end atual inicia todos os processos com prioridade 0, então este modo se comporta como Round Robin.',
   },
-  {
-    id: 'custom',
+  custom: {
     label: 'Custom',
     title: 'Custom',
-    preemptive: false,
     note: 'Sem regra própria no back-end: a fila fica na ordem de chegada, como no FIFO.',
   },
-];
+};
 
-// Quantum padrão (o mesmo que o back-end usa sem a variável SCHEDULER_QUANTUM).
-// Só tem efeito nos modos preemptivos: round_robin, strf e priority.
-export const DEFAULT_QUANTUM = 6;
-export const MIN_QUANTUM = 1;
-export const MAX_QUANTUM = 20;
+export const MODES: ModeInfo[] = SCHEDULER_MODES.map((id) => ({
+  id,
+  ...MODE_PRESENTATION[id],
+  preemptive: isPreemptiveMode(id),
+}));
 
-export const MAX_PROCESSES = 6;
-
-// Paleta de processos (a ordem é fixa: P0 é sempre o primeiro cor).
+// Paleta e cores de eventos são configurações visuais, não regras do escalonador.
 export const PROCESS_COLORS = ['#E8584F', '#2EB8A6', '#F2A93B', '#9B7BEA', '#4F9CF0', '#E26BA6'] as const;
-
 export const IDLE_COLOR = '#8A8F98';
 
 export const EVENT_META: Record<SchedulerEvent['kind'], { label: string; short: string; color: string; help: string }> = {
@@ -84,7 +93,7 @@ export const EVENT_META: Record<SchedulerEvent['kind'], { label: string; short: 
     label: 'Imprimiu',
     short: 'print',
     color: '#4F9CF0',
-    help: 'O processo executou um print. O valor mostrado é o do registrador indicado no print, naquele momento.',
+    help: 'O valor mostrado é o do registrador indicado no print, naquele momento.',
   },
   exit: {
     label: 'Terminou',

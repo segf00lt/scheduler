@@ -1,16 +1,20 @@
-import type { ModeInfo } from '../constants';
-import { MAX_QUANTUM, MIN_QUANTUM } from '../constants';
-import type { SchedulerMode } from '../types';
+import type { ModeInfo } from '../constants.js';
+import { MAX_EVENT_DURATION, MAX_QUANTUM, MIN_EVENT_DURATION, MIN_QUANTUM } from '../constants.js';
+import type { SchedulerMode } from '../types.js';
 
 interface Props {
   mode: SchedulerMode;
   modes: ModeInfo[];
   quantum: number;
+  blockingDuration: number;
+  preemptionDuration: number;
   preemptive: boolean;
   theme: 'dark' | 'light';
   busy: boolean;
   onModeChange: (mode: SchedulerMode) => void;
   onQuantumChange: (value: number) => void;
+  onBlockingDurationChange: (value: number) => void;
+  onPreemptionDurationChange: (value: number) => void;
   onThemeToggle: () => void;
   onRun: () => void;
 }
@@ -66,6 +70,38 @@ export function TopBar(props: Props) {
             value={Number.isNaN(props.quantum) ? '' : props.quantum}
             aria-label="Quantum (instruções por fatia)"
             onChange={(e) => props.onQuantumChange(e.target.valueAsNumber)}
+          />
+        </label>
+
+        <label className="control" title="Duração em instantes simulados de input e print.">
+          <span className="control-label">Bloqueio</span>
+          <input
+            type="number"
+            className="control-number"
+            min={MIN_EVENT_DURATION}
+            max={MAX_EVENT_DURATION}
+            step={1}
+            value={Number.isNaN(props.blockingDuration) ? '' : props.blockingDuration}
+            aria-label="Duração de bloqueio em instantes"
+            onChange={(e) => props.onBlockingDurationChange(e.target.valueAsNumber)}
+          />
+        </label>
+
+        <label
+          className={`control ${props.preemptive ? '' : 'is-disabled'}`}
+          title="Duração em instantes simulados para troca de processo após preempção."
+        >
+          <span className="control-label">Preempção</span>
+          <input
+            type="number"
+            className="control-number"
+            min={MIN_EVENT_DURATION}
+            max={MAX_EVENT_DURATION}
+            step={1}
+            disabled={!props.preemptive}
+            value={Number.isNaN(props.preemptionDuration) ? '' : props.preemptionDuration}
+            aria-label="Duração de preempção em instantes"
+            onChange={(e) => props.onPreemptionDurationChange(e.target.valueAsNumber)}
           />
         </label>
       </div>

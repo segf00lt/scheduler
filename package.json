@@ -5,7 +5,9 @@
     "typescript": "^7.0.2"
   },
   "scripts": {
-    "web:install": "cd front-end && npm install",
-    "frontend": "cd front-end && npm run dev"
+    "web:install": "npm --prefix front install",
+    "web:build": "npm --prefix front run build",
+    "frontend": "npm --prefix front run dev",
+    "scheduler": "tsx back/cli.ts"
   }
 }

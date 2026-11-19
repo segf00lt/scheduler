@@ -1,0 +1,50 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Frontend + backend: Vite and Chrome",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["--import", "tsx"],
+      "program": "${workspaceFolder}/front/node_modules/vite/bin/vite.js",
+      "args": ["--configLoader", "native", "--host", "127.0.0.1", "--strictPort"],
+      "cwd": "${workspaceFolder}/front",
+      "console": "integratedTerminal",
+      "sourceMaps": true,
+      "skipFiles": ["<node_internals>/**"],
+      "serverReadyAction": {
+        "pattern": "Local: +http://127\\.0\\.0\\.1:([0-9]+)",
+        "uriFormat": "http://127.0.0.1:%s",
+        "webRoot": "${workspaceFolder}/front",
+        "action": "debugWithChrome"
+      }
+    },
+    {
+      "name": "Backend CLI: factorial (input required)",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["--import", "tsx"],
+      "program": "${workspaceFolder}/back/cli.ts",
+      "args": ["round_robin", "tests/factorial.asm"],
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "sourceMaps": true,
+      "skipFiles": ["<node_internals>/**"]
+    },
+    {
+      "name": "Backend CLI: Fibonacci (input required)",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["--import", "tsx"],
+      "program": "${workspaceFolder}/back/cli.ts",
+      "args": ["round_robin", "tests/fibonacci.asm"],
+      "console": "integratedTerminal",
+      "cwd": "${workspaceFolder}",
+      "sourceMaps": true,
+      "skipFiles": ["<node_internals>/**"]
+    }
+  ]
+}

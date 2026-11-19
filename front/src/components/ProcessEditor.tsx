@@ -1,5 +1,6 @@
-import type { ProgramInfo } from '../types';
-import { MAX_PROCESSES, PROCESS_COLORS } from '../constants';
+import type { ProgramInfo, SchedulerEvent } from '../types.js';
+import { MAX_PROCESSES, PROCESS_COLORS } from '../constants.js';
+import { ProcessConsole } from './ProcessConsole.js';
 
 export interface ProcessDraft {
   // Exemplo de onde veio o código (id de tests/*.asm), ou null se o usuário editou/escreveu.
@@ -13,9 +14,11 @@ interface Props {
   activeIndex: number;
   onActiveChange: (index: number) => void;
   onProcessesChange: (rows: ProcessDraft[]) => void;
-  inputsText: string;
-  onInputsChange: (value: string) => void;
   modeNote: string;
+  events: SchedulerEvent[];
+  waitingInput: { process: number; register: number } | null;
+  running: boolean;
+  onSubmitInput: (value: string) => Promise<void>;
 }
 
 const NEW_PROCESS_SOURCE = 'set r0, 1\nprint r0\nset r1, 2\n';
@@ -128,24 +131,13 @@ export function ProcessEditor(props: Props) {
         />
       </div>
 
-      <div className="field-row">
-        <label htmlFor="inputs" className="field-label">
-          Entradas (input)
-        </label>
-        <input
-          id="inputs"
-          type="text"
-          className="text-input"
-          value={props.inputsText}
-          onChange={(e) => props.onInputsChange(e.target.value)}
-          placeholder="ex.: 8, 5"
-          autoComplete="off"
-        />
-        <p className="hint">
-          Valores inteiros separados por vírgula. O back-end usa uma única entrada para todos os processos: cada pedido
-          de <code>input</code> pega o próximo valor, na ordem em que acontecem.
-        </p>
-      </div>
+      <ProcessConsole
+        process={activeIndex}
+        events={props.events}
+        waitingInput={props.waitingInput}
+        running={props.running}
+        onSubmit={props.onSubmitInput}
+      />
 
       <details className="notice">
         <summary>Por que não há prioridade, chegada ou duração?</summary>
