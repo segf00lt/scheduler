@@ -30,6 +30,7 @@ export type ProcessStatus = "run" | "block" | "exit";
 export interface ProcessState {
   id: number;
   priority: number;
+  deadline: number;
   instructions: Instruction[];
   pc: number;
   registers: bigint[];
@@ -62,10 +63,10 @@ function isPreemptive(mode: SchedulerMode): boolean {
   return mode === "strf" || mode === "round_robin" || mode === "priority" || mode === "edf";
 }
 
-function createProcess(program: Program, priority = 0): ProcessState {
+function createProcess(program: Program, priority = 0, deadline = Infinity): ProcessState {
   assert(program.instructions.length > 0, "Cannot create a process from an empty program");
   return {
-    id: nextProcessId++, priority, instructions: program.instructions, pc: 0,
+    id: nextProcessId++, priority, deadline, instructions: program.instructions, pc: 0,
     registers: Array.from({ length: 256 }, () => 0n), memory: new Uint8Array(64 * 1024),
     maxPcValue: program.instructions.length - 1, status: "run",
     quantumUsedThisRun: 0, avgQuantumUsed: 0,
@@ -91,6 +92,9 @@ function sortQueue(queue: ProcessState[]): void {
     return;
     case "priority":
     queue.sort((a, b) => a.priority - b.priority);
+    return;
+    case "edf":
+    queue.sort((a, b) => a.deadline - b.deadline);
     return;
   }
 }
@@ -366,19 +370,22 @@ function assemble(source: string): Program {
 
 function main(argv: string[]): number {
   if(argv.length < 2) {
-    console.error("Usage: scheduler.ts <fifo|round_robin|sjf|strf|priority|custom> <file.asm>...");
+    console.error("Usage: scheduler.ts <fifo|round_robin|sjf|strf|priority|custom|edf> <file.asm>...");
     return 1;
   }
   const mode = argv[0] as SchedulerMode;
-  const valid: SchedulerMode[] = ["fifo", "round_robin", "sjf", "strf", "priority", "custom"];
+  const valid: SchedulerMode[] = ["fifo", "round_robin", "sjf", "strf", "priority", "custom", "edf"];
   if(!valid.includes(mode)) { console.error(`Unknown option '${argv[0]}'`); return 1; }
   schedulerMode = mode;
   const queue: ProcessState[] = [];
   try {
-    for(const path of argv.slice(1)) {
+    for(const arg of argv.slice(1)) {
+      const [path, rawDeadline] = arg.split(":");
+      const deadline = rawDeadline !== undefined ? Number(rawDeadline) : Infinity;
+
       if(!fs.existsSync(path)) throw new Error(`No such file '${path}'`);
       const program = assemble(fs.readFileSync(path, "utf8"));
-      queue.push(createProcess(program));
+      queue.push(createProcess(program, 0, deadline));
     }
     processScheduler(queue);
     return 0;
